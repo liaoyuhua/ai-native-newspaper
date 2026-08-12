@@ -1,0 +1,17 @@
+{% extends "base.html.jinja" %}
+
+{% block title %}往期归档 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="page">
+  <ul class="archive-list">
+    {% for issue in issues %}
+    <li>
+      <span class="week">{{ issue.week_label }}</span><br />
+      <a href="articles/{{ issue.week_id }}/index.html">{{ issue.title }}</a>
+      {% if issue.subtitle %}<span class="subtitle">{{ issue.subtitle }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

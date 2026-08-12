@@ -1,0 +1,82 @@
+{
+  "topic_id": "cross-skill-composition-blindspot",
+  "display_name": "跨技能组合攻击与组合验证防御",
+  "aliases": [
+    "组合攻击盲区",
+    "跨技能扫描规避",
+    "agent技能供应链安全",
+    "工作流安全验证",
+    "跨技能组合攻击为什么会成为 agent 技能扫描器的盲区？能否通过组合验证来防御？",
+    "技能供应链安全",
+    "运行时行为审计",
+    "权限原语收窄",
+    "Agent技能盲区",
+    "组合验证局限性"
+  ],
+  "coverage": [
+    {
+      "week_id": "2026-W33",
+      "article_title": "从拆弹到拼弹：跨技能组合如何刺穿静态扫描的铠甲",
+      "covered_angles": [
+        "结构性错配：现有扫描器以单技能为分析单元，而攻击的执行单元是跨技能工作流，导致组合空间成为系统性盲区。",
+        "ColluSkill的自动化攻击与ChainGuard的组合防御：ColluSkill通过LLM链式分解和扫描器反馈漂白，将恶意意图散入多个外观良性的子技能，实现96% ASR；ChainGuard联合分析依赖、工件流和能力组合，将ASR降至22.5%，验证了组合感知防御的可行性但亦暴露残余风险与可扩展性挑战。",
+        "ElasticBack的单技能条件后门：通过语义锚定规则与触发短语耦合，恶意语义仅在高条件共现时激活，对良性输入完全休眠，证明组合验证无法覆盖时间维度的盲区，防御需兼顾条件触发模式。",
+        "安装时审计的终极局限：Cloak and Detonate研究表明结构性混淆与自解压打包可绕过超过90%的静态扫描器，任何依赖安装时外观的审计（含组合级）均可被系统性规避；防御的收敛方向在于运行时行为验证，如SkillDetonate通过沙箱执行和污点分析，以OS边界信息流证据实现97%检出率和2%误报率。",
+        "生态实证支撑防御设计：Skills Are Not Islands对143万技能的供应链分析证实跨技能依赖普遍存在且围绕工作流聚簇，为组合验证的必要性和搜索空间提供量化依据；SkillVetBench基准表明89%恶意技能威胁源于跨组件交互，攻击集中在exec/write_file/install_skill/spawn等少数高权限原语，为权限面收窄提供具体优先级。"
+      ],
+      "key_works_covered": [
+        {
+          "title": "ColluSkill: Adversarial Cross-Skill Composition for Evading Agent Skill Scanners",
+          "url": "https://arxiv.org/abs/2608.09732",
+          "note": "核心攻防论文：提出跨技能组合攻击（96% ASR）与ChainGuard防御（降至22.5%），揭示分析单元错配。"
+        },
+        {
+          "title": "ElasticBack: Stealthy Conditional Backdoor in LLM-Agent Skills via Coupled Trigger–Rule Optimization",
+          "url": "https://arxiv.org/abs/2608.09577",
+          "note": "单技能条件后门攻击，无需修改权重，对良性输入休眠，证明组合扫描对时间维度盲区。"
+        },
+        {
+          "title": "Cloak and Detonate: Scanner Evasion and Dynamic Detection of Agent Skill Malware",
+          "url": "https://arxiv.org/abs/2607.02357",
+          "note": "证明安装时审计可被系统性规避（混淆/打包绕过率>90%），运行时检测SkillDetonate以97%检出率提供收敛方向。"
+        },
+        {
+          "title": "SkillVetBench: Benchmarking Security Risk Detection and Verification in Open Agentic Skill Ecosystems",
+          "url": "https://arxiv.org/abs/2606.00925",
+          "note": "基准揭示89%恶意威胁来自跨组件交互，攻击集中于exec/write_file/install_skill/spawn等高权限原语。"
+        },
+        {
+          "title": "Skills Are Not Islands: Measuring Dependency and Risk in Agent Skill Supply Chains",
+          "url": "https://arxiv.org/abs/2607.01136",
+          "note": "实证143万技能依赖图显示跨技能依赖普遍存在，量化组合验证的搜索空间和必要性。"
+        }
+      ],
+      "open_questions": [
+        "组合分析的可扩展性与残余风险：ChainGuard将ASR降至22.5%，但联合分析的计算成本与误报控制如何随安装基数扩展？",
+        "条件触发与组合攻击的正交性尚未统一建模：ElasticBack与ChainGuard各覆盖不同盲区，如何构建统一验证框架？",
+        "运行时验证的探针覆盖与生态成本：收窄高权限原语默认授权与扩大运行时探针覆盖，哪个能以更低摩擦获得更大风险削减？"
+      ],
+      "follow_up_signals": [
+        "出现同时利用空间分解（跨技能）与时间耦合（条件触发）的混合攻击实证",
+        "扫描器或平台宣布集成组合级分析功能并公布误报/漏报数据",
+        "大规模skill供应链攻击事件中确认利用跨技能依赖关系",
+        "研究提出将组合分析与运行时验证统一的形式化框架",
+        "平台开始实施对exec/write_file/install_skill/spawn等原语的强制确认或能力收窄并提供影响评估"
+      ],
+      "avoid_repeating": [
+        "避免再详细解释A→B→C链的攻击原理（可用一句话带过）",
+        "避免重复ColluSkill的链规划与反馈漂白算法细节",
+        "避免复述ElasticBack的遗传搜索优化过程",
+        "避免重复描述Cloak and Detonate的混淆与打包具体技术",
+        "避免复述Skills Are Not Islands的依赖图构建方法细节"
+      ]
+    }
+  ],
+  "one_line_summary": "Agent技能安全需三层防线：安装时组合感知分析降低跨技能攻击，运行时行为验证补足条件后门与混淆规避，权限面收窄高权限原语默认授权；单一防线均存在盲区，现实威胁正从单技能转向组合与时间维度。",
+  "standing_open_questions": [
+    "组合分析的可扩展性与残余风险：ChainGuard将ASR降至22.5%，但联合分析的计算成本与误报控制如何随安装基数扩展？",
+    "条件触发与组合攻击的正交性尚未统一建模：ElasticBack与ChainGuard各覆盖不同盲区，如何构建统一验证框架？",
+    "运行时验证的探针覆盖与生态成本：收窄高权限原语默认授权与扩大运行时探针覆盖，哪个能以更低摩擦获得更大风险削减？"
+  ],
+  "updated_at": "2026-08-12T05:54:26Z"
+}

@@ -1,0 +1,26 @@
+{
+  "run_id": "2026-W33-scan",
+  "workflow": "weekly_scan_v2",
+  "status": "completed",
+  "started_at": "2026-08-11T14:40:03.582494+00:00",
+  "finished_at": "2026-08-11T14:46:58.473565+00:00",
+  "python_version": "3.10.10",
+  "config": {
+    "lookback_days": 14,
+    "schema_version": "2.0",
+    "no_issue": true
+  },
+  "stages": [
+    {
+      "name": "selection_completed",
+      "at": "2026-08-11T14:46:58.473508+00:00",
+      "item_count": 552,
+      "shortlist_count": 5,
+      "recommendation": "pursue"
+    }
+  ],
+  "decision": {
+    "selected_question": "跨技能组合攻击为什么会成为 agent 技能扫描器的盲区？能否通过组合验证来防御？",
+    "score": 4.626
+  }
+}

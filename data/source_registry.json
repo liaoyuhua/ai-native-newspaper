@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.0",
+  "sources": {
+    "OpenAI News": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "last_success_at": "2026-08-11T14:53:44.497364+00:00",
+      "last_endpoint": "https://openai.com/news/rss.xml",
+      "last_fetcher": "rss",
+      "last_item_count": 29,
+      "last_error": ""
+    },
+    "Anthropic News": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "last_success_at": "2026-08-11T14:53:47.292412+00:00",
+      "last_endpoint": "https://www.anthropic.com/news",
+      "last_fetcher": "html_list",
+      "last_item_count": 4,
+      "last_error": ""
+    },
+    "Google DeepMind Blog": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "last_success_at": "2026-08-11T14:53:49.042525+00:00",
+      "last_endpoint": "https://deepmind.google/blog/rss.xml",
+      "last_fetcher": "rss",
+      "last_item_count": 3,
+      "last_error": ""
+    },
+    "Meta AI Blog": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "active_override": {
+        "url": "https://ai.meta.com/blog/",
+        "fetcher": "html_list",
+        "path_prefix": "/blog/",
+        "validated": true,
+        "validated_at": "2026-08-11T14:53:58.109850+00:00"
+      },
+      "last_success_at": "2026-08-11T14:53:58.109867+00:00",
+      "last_endpoint": "https://ai.meta.com/blog/",
+      "last_fetcher": "html_list",
+      "last_item_count": 10,
+      "last_error": ""
+    },
+    "Hugging Face Blog": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "last_success_at": "2026-08-11T14:54:01.056203+00:00",
+      "last_endpoint": "https://huggingface.co/blog/feed.xml",
+      "last_fetcher": "rss",
+      "last_item_count": 8,
+      "last_error": ""
+    },
+    "Mistral AI News": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "active_override": {
+        "url": "https://mistral.ai/news/rss",
+        "fetcher": "rss",
+        "path_prefix": "",
+        "validated": true,
+        "validated_at": "2026-08-11T14:54:09.319705+00:00"
+      },
+      "last_success_at": "2026-08-11T14:54:09.319712+00:00",
+      "last_endpoint": "https://mistral.ai/news/rss",
+      "last_fetcher": "rss",
+      "last_item_count": 1,
+      "last_error": ""
+    },
+    "TechCrunch AI": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "last_success_at": "2026-08-11T14:54:14.681310+00:00",
+      "last_endpoint": "https://techcrunch.com/category/artificial-intelligence/feed/",
+      "last_fetcher": "rss",
+      "last_item_count": 20,
+      "last_error": ""
+    },
+    "VentureBeat AI": {
+      "status": "stale",
+      "consecutive_failures": 0,
+      "last_success_at": "2026-08-11T14:54:18.742603+00:00",
+      "last_endpoint": "https://venturebeat.com/category/ai/feed/",
+      "last_fetcher": "rss",
+      "last_item_count": 0,
+      "last_error": ""
+    },
+    "The Verge AI": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "last_success_at": "2026-08-11T14:54:20.398163+00:00",
+      "last_endpoint": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+      "last_fetcher": "rss",
+      "last_item_count": 10,
+      "last_error": ""
+    },
+    "Ars Technica AI": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "last_success_at": "2026-08-11T14:54:24.012130+00:00",
+      "last_endpoint": "https://arstechnica.com/ai/feed/",
+      "last_fetcher": "rss",
+      "last_item_count": 20,
+      "last_error": ""
+    },
+    "量子位": {
+      "status": "healthy",
+      "consecutive_failures": 0,
+      "last_success_at": "2026-08-11T14:54:27.530628+00:00",
+      "last_endpoint": "https://www.qbitai.com/feed",
+      "last_fetcher": "rss",
+      "last_item_count": 10,
+      "last_error": ""
+    }
+  },
+  "updated_at": "2026-08-11T14:54:27.530719+00:00"
+}

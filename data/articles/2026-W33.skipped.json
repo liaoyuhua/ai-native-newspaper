@@ -1,0 +1,1570 @@
+{
+  "week_id": "2026-W33",
+  "topic_name": "跨技能组合攻击为什么会成为 agent 技能扫描器的盲区？能否通过组合验证来防御？",
+  "reason": "claim_audit_failed",
+  "quality_report": {
+    "claim_audit": {
+      "claims": [
+        {
+          "text": "现有技能扫描器的检查单元是单个技能；它们检查技能声明的指令、权限以及所附代码的行为，以判断是否包含恶意意图。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "论文摘要明确指出现有防御主要检查单个技能的指令、权限、依赖和代码行为。"
+        },
+        {
+          "text": "这种单件审计在技能市场早期或可理解。",
+          "kind": "author_judgment",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "作者的价值判断，无需外部证据。"
+        },
+        {
+          "text": "当攻击者将恶意意图拆解为多个表面无害的技能时，扫描器的分析单元就与攻击单元发生了结构性错配。",
+          "kind": "inference",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要指出单技能检查会留下跨技能组合风险，作者据此推出结构性错配。"
+        },
+        {
+          "text": "ColluSkill 框架的实验结果初步显示，这类攻击能够高度成功地避开单技能的检测。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要报告 ColluSkill 在六个扫描器上平均攻击成功率达96.0%。"
+        },
+        {
+          "text": "单技能审计下，ColluSkill 攻击成功率达 96%。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要给出平均攻击成功率96.0%。"
+        },
+        {
+          "text": "跨技能组合分析（ChainGuard）可将攻击成功率降至 22.5%。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要报告 ChainGuard 将攻击成功率降至22.5%。"
+        },
+        {
+          "text": "ColluSkill 的规避方式是把恶意语义分解到多个技能中。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要描述 ColluSkill 将完整恶意意图分解为多个子载荷并嵌入独立技能。"
+        },
+        {
+          "text": "跨技能组合分析的防御下，攻击者需同时漂白整条链，难度大增。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是文章从反馈漂白机制推出的解释，无直接外部证据作为独立陈述。"
+        },
+        {
+          "text": "盲区并非扫描器不够聪明，而是攻击者把恶意语义存放在技能之间的组合空间，而防御方尚未覆盖到这一层。",
+          "kind": "inference",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要中 blind spot 与 cross-skill composition insufficiently examined 支持该解释。"
+        },
+        {
+          "text": "ElasticBack 将恶意藏进单技能的时间条件中。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_03467c62cfe6"
+          ],
+          "support": "supported",
+          "reason": "摘要说明 ElasticBack 是条件性单技能后门，仅在触发词与规则同时出现时激活。"
+        },
+        {
+          "text": "ColluSkill 的核心机制分两步：先用 LLM 将恶意意图规划为相互依赖的子技能链，再通过扫描器反馈迭代漂白被标记的技能。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要提到 LLM-based chain planning 和 scanner-feedback refinement。"
+        },
+        {
+          "text": "链式规划将恶意目标分解为多个子载荷，并通过上下文依赖、工件传递和执行交接设计因果关系。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要明确列出 contextual dependencies, artifact passing, execution handoffs。"
+        },
+        {
+          "text": "A→B→C 示例中，A 将目录列表写入 /tmp/proj_tree.json，B 读取并嵌入 Markdown，C 将内容发送到外部端点。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是作者构造的简化示例，不属于外部可核实结果。"
+        },
+        {
+          "text": "反馈驱动漂白基于扫描器反馈重写被标记技能，在保持链级攻击语义不变的前提下降低单个技能的可疑评分。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要提到 scanner-feedback refinement 以降低单个子技能内可疑信号。"
+        },
+        {
+          "text": "例如，被标记的 C 技能描述会被改为“将格式化内容同步到团队频道”，同时确保 B 的输出仍能流入 C。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是文章给出的具体改写例子，非外部证据内容。"
+        },
+        {
+          "text": "可以推测，这种机制的威力来自攻击语义的分布式存储：没有一个子技能单独承载恶意标签，传统静态分析对此几乎完全失明。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "文章明确以“可以推测”引出，是解释性推断。"
+        },
+        {
+          "text": "ColluSkill 的威胁模型假设攻击者能部署多个技能。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要描述 ColluSkill 是一种多技能链攻击框架，需将子载荷嵌入多个技能。"
+        },
+        {
+          "text": "ElasticBack 在单技能内部制造条件后门，激活依赖用户查询中的触发短语 T 与技能文档中预埋规则 R 同时出现。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_03467c62cfe6"
+          ],
+          "support": "supported",
+          "reason": "摘要明确说明 plants rule R in skill document and trigger T in user query, payload fires only when both co-occur。"
+        },
+        {
+          "text": "规则 R 的注入是语义锚定的，使其看起来像原有功能的自然扩展。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_03467c62cfe6"
+          ],
+          "support": "supported",
+          "reason": "摘要提到 generating R via semantic-anchored rule injection。"
+        },
+        {
+          "text": "触发短语 T 通过遗传搜索优化生成：冻结 R，迭代搜索以平衡触发有效性与隐蔽性。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_03467c62cfe6"
+          ],
+          "support": "supported",
+          "reason": "摘要提到 freezes R and evolves T via stealth-constrained genetic search。"
+        },
+        {
+          "text": "ElasticBack 的攻击完全在单技能内完成，不依赖其他技能。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_03467c62cfe6"
+          ],
+          "support": "supported",
+          "reason": "摘要称其为 single-skill backdoor，不依赖多技能或微调权重。"
+        },
+        {
+          "text": "因此 ChainGuard 这类组合扫描器对 ElasticBack 完全失明。",
+          "kind": "inference",
+          "evidence_ids": [
+            "ev_03467c62cfe6"
+          ],
+          "support": "partial",
+          "reason": "摘要仅说 ElasticBack 能规避部署期防御，并未点名 ChainGuard；文章将其推断为“完全失明”。"
+        },
+        {
+          "text": "防御需要同时覆盖空间分解（ColluSkill）和时间耦合（ElasticBack）两个维度。",
+          "kind": "author_judgment",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "作者提出的防御方向判断，无需外部证据。"
+        },
+        {
+          "text": "ChainGuard 通过联合分析候选技能与已安装技能的依赖、工件流和能力组合来识别风险。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要描述 ChainGuard jointly analyzes candidate and installed skills, reconstructs dependencies, artifact flows, capability compositions。"
+        },
+        {
+          "text": "ChainGuard 可有效降低跨技能攻击成功率，同时保持良好的良性工作流通行率。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要报告攻击成功率降至22.5%，且99.5%良性工作流通过。"
+        },
+        {
+          "text": "ChainGuard 将安全分析单元从单个技能提升到技能图，缩小了 ColluSkill 的生存空间。",
+          "kind": "inference",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要显示它进行跨技能依赖和工作流分析，作者由此推断分析单元提升到技能图。"
+        },
+        {
+          "text": "残余的攻击成功率表明，链级静态分析仍然有边界。",
+          "kind": "inference",
+          "evidence_ids": [
+            "ev_a948aa17fb2d"
+          ],
+          "support": "supported",
+          "reason": "摘要中22.5%的残余成功率支持该推断。"
+        },
+        {
+          "text": "当攻击者采用单技能条件后门（如 ElasticBack）时，组合视角完全无效。",
+          "kind": "author_judgment",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是作者对组合验证局限性的判断，基于 ElasticBack 的性质。"
+        },
+        {
+          "text": "安全验证必须从“技能长什么样”转变为“工作流实际做了什么”。",
+          "kind": "author_judgment",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "作者提出的理念性判断。"
+        },
+        {
+          "text": "SkillVetBench 的运行时验证阶段在沙箱中执行技能，通过收集 OS 边界的审计证据（如系统调用和文件操作）检测恶意行为。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_4c563aea9279"
+          ],
+          "support": "partial",
+          "reason": "摘要确认沙箱执行与审计证据收集，但未明确提及‘OS边界’‘系统调用’‘文件操作’等具体细节。"
+        },
+        {
+          "text": "若攻击嵌入条件触发（如 ElasticBack），除非测试输入恰好命中触发短语，否则后门不会显露。",
+          "kind": "inference",
+          "evidence_ids": [
+            "ev_03467c62cfe6"
+          ],
+          "support": "supported",
+          "reason": "摘要称该后门仅在 T 与 R 共现时触发，良性输入上保持休眠，支持该推断。"
+        },
+        {
+          "text": "SkillVetBench 的两阶段框架也初步提示了类似局限：静态语义分析可能有遗漏，而关键的运行时风险往往与少数高权限操作相关。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_4c563aea9279"
+          ],
+          "support": "supported",
+          "reason": "摘要报告纯语义/签名基线不足（漏检高达89%），且运行时攻击集中于 exec、write_file、install_skill、spawn 等高权限原语。"
+        },
+        {
+          "text": "由此可推演出合理的安全栈分层：安装时组合感知、运行时行为证据、权限原语收窄（默认不信任 exec/write_file/spawn，必须显式授权）。",
+          "kind": "inference",
+          "evidence_ids": [
+            "ev_4c563aea9279"
+          ],
+          "support": "partial",
+          "reason": "前两层由前述工作支持，但‘默认不信任并显式授权’是作者的建议，不是证据中的陈述。"
+        },
+        {
+          "text": "三个层次互补：组合分析拦截链条组装，运行时验证捕获实际恶意行为，权限收窄提高攻击门槛。",
+          "kind": "author_judgment",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "作者对安全栈层次的解释与价值判断。"
+        },
+        {
+          "text": "当前开放问题包括条件触发与组合攻击的正交性缺乏统一建模，以及运行时探针覆盖率成本；未来方向是结合依赖图分析与运行时污点推断并收紧高权限原语默认授权。",
+          "kind": "author_judgment",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "作者对开放问题与未来方向的总结判断。"
+        }
+      ],
+      "blocking_claims": [
+        {
+          "text": "跨技能组合分析的防御下，攻击者需同时漂白整条链，难度大增。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是文章从反馈漂白机制推出的解释，无直接外部证据作为独立陈述。"
+        },
+        {
+          "text": "A→B→C 示例中，A 将目录列表写入 /tmp/proj_tree.json，B 读取并嵌入 Markdown，C 将内容发送到外部端点。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是作者构造的简化示例，不属于外部可核实结果。"
+        },
+        {
+          "text": "例如，被标记的 C 技能描述会被改为“将格式化内容同步到团队频道”，同时确保 B 的输出仍能流入 C。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是文章给出的具体改写例子，非外部证据内容。"
+        },
+        {
+          "text": "可以推测，这种机制的威力来自攻击语义的分布式存储：没有一个子技能单独承载恶意标签，传统静态分析对此几乎完全失明。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "文章明确以“可以推测”引出，是解释性推断。"
+        },
+        {
+          "text": "SkillVetBench 的运行时验证阶段在沙箱中执行技能，通过收集 OS 边界的审计证据（如系统调用和文件操作）检测恶意行为。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_4c563aea9279"
+          ],
+          "support": "partial",
+          "reason": "摘要确认沙箱执行与审计证据收集，但未明确提及‘OS边界’‘系统调用’‘文件操作’等具体细节。"
+        }
+      ],
+      "pass": false,
+      "round": 3
+    },
+    "claim_audit_rounds": [
+      {
+        "claims": [
+          {
+            "text": "现有技能扫描器的检查单元是单个技能。它们会检查技能声明的指令、权限以及所附代码的行为，以判断是否包含恶意意图。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "证据明确说明当前防御主要检查单个技能的指令、权限、依赖和代码行为。"
+          },
+          {
+            "text": "这种单件审计在技能市场早期是合理的——因为攻击者通常会在一份技能里塞进完整的恶意载荷。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "作者对历史合理性的判断，不要求外部证据。"
+          },
+          {
+            "text": "当攻击者将恶意意图拆解为多个表面无害的技能时，扫描器的分析单元就与攻击单元发生了结构性错配。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "由ColluSkill机制（多技能组合攻击）合理推出。"
+          },
+          {
+            "text": "以一条简化的 A→B→C 链为例：单独扫描时每件技能都通过检查，但运行中 A 的工件经 B 递给 C，最终实现敏感目录外泄。这就是跨技能组合攻击的原理。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "机制（上下文依赖、工件传递、执行交接）有证据支持，具体A→B→C是作者示例。"
+          },
+          {
+            "text": "ColluSkill 框架的实验结果初步显示，这类攻击能够高度成功地避开单技能的检测。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "论文报告ColluSkill平均攻击成功率达96.0%。"
+          },
+          {
+            "text": "单技能审计对 ColluSkill 的检出率约 4%。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "partial",
+            "reason": "证据仅有攻击成功率96%，未直接给出单技能检出率，该数字为反推，可能不精确。"
+          },
+          {
+            "text": "跨技能组合分析（ChainGuard）对 ColluSkill 的检出率为 77.5%。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "论文报告ChainGuard将攻击成功率降至22.5%，即检出率77.5%。"
+          },
+          {
+            "text": "盲区并非扫描器“不够聪明”，而是攻击者把恶意语义存放在了技能之间的组合空间，而防御方尚未覆盖到这一层。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "由ColluSkill多技能组合攻击机制推出。"
+          },
+          {
+            "text": "ColluSkill 的核心机制可以概括为两步：先用 LLM 将恶意意图规划为相互依赖的子技能链，再通过扫描器反馈迭代“漂白”被标记的技能。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "论文摘要明确描述LLM-based chain planning和scanner-feedback refinement。"
+          },
+          {
+            "text": "攻击者给定一个完整恶意目标，LLM 会将其分解为多个子载荷，并设计它们之间的因果关系；关系通过上下文依赖、工件传递和执行交接实现。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "论文描述decomposition和contextual dependencies, artifact passing, execution handoffs。"
+          },
+          {
+            "text": "反馈驱动漂白：对于被标记为可疑的技能，ColluSkill 基于扫描器反馈进行重写，在保持链级攻击语义不变的前提下降低单个技能的可疑评分。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "论文描述scanner-feedback refinement以保持链级语义并减少可疑信号。"
+          },
+          {
+            "text": "可以推测，这种机制的威力来自攻击语义的“分布式存储”：没有一个子技能单独承载恶意标签，危险只出现在执行时技能间的信息流动中。这也是为何传统静态分析对此几乎完全失明。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "正文明确使用“可以推测”，且与ColluSkill机制一致。"
+          },
+          {
+            "text": "ColluSkill 的威胁模型假设攻击者能部署多个技能。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "论文将其定义为multi-skill-chain attack框架，隐含多技能部署能力。"
+          },
+          {
+            "text": "ElasticBack 在单技能内部制造了一个条件后门，其激活依赖于用户查询中的触发短语 T 与技能文档中预埋的规则 R 的同时出现。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "论文摘要明确指出malicious payload fires only when both co-occur。"
+          },
+          {
+            "text": "规则 R 的注入是语义锚定的；攻击者将恶意规则 R 植入技能文档，使其看起来像是对原有功能的自然扩展。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "论文描述semantic-anchored rule injection。"
+          },
+          {
+            "text": "触发短语 T 通过遗传搜索优化生成，在冻结 R 的条件下平衡触发有效性与隐蔽性。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "论文描述stealth-constrained genetic search。"
+          },
+          {
+            "text": "一个与“周报生成”相关的后门可能被触发于特定短语如“整合周三的进度到周报”，该短语在通用语料中罕见。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "具体例子为作者虚构，无外部证据支持“罕见”断言。"
+          },
+          {
+            "text": "ElasticBack 的攻击完全在单技能内完成，不依赖其他技能。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "论文将其定位为conditional single-skill backdoor。"
+          },
+          {
+            "text": "因此 ChainGuard 这类组合扫描器对 ElasticBack 完全失明。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "由单技能特性推断组合扫描器无法覆盖，正文使用“因此”表明推断。"
+          },
+          {
+            "text": "防御需要同时覆盖“空间分解”（ColluSkill）和“时间耦合”（ElasticBack）两个维度。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "作者基于两类攻击机制提出的防御主张。"
+          },
+          {
+            "text": "ChainGuard 通过联合分析候选技能与已安装技能的依赖、工件流和能力组合，据报道可有效降低跨技能攻击的成功率，同时保持良好的良性工作流通行率。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "论文报告攻击成功率降至22.5%，良性工作流通过率99.5%。"
+          },
+          {
+            "text": "这意味着它将安全分析单元从单个技能提升到了技能图，有效地缩小了 ColluSkill 的生存空间。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "从ChainGuard的联合分析机制推出。"
+          },
+          {
+            "text": "残余的攻击成功率表明，链级静态分析仍然有边界——尤其是当攻击者采用更隐蔽的单技能条件后门（如 ElasticBack）时，组合视角完全无效。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d",
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "残余22.5%攻击成功率加上ElasticBack单技能特性推出。"
+          },
+          {
+            "text": "SkillDetonate 在沙箱中执行技能，通过 OS 边界的信息流证据检测恶意行为，据报道对已知攻击有较高的检测率，且误报率较低。",
+            "kind": "reported_result",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "未提供任何证据或引用支撑SkillDetonate的检测结果。"
+          },
+          {
+            "text": "动态分析的挑战在于，若攻击嵌入条件触发（如 ElasticBack），除非测试输入恰好命中触发短语，否则后门不会显露。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "由ElasticBack条件共现机制推出。"
+          },
+          {
+            "text": "SkillVetBench 的两阶段框架也初步提示了类似局限：静态语义分析可能有遗漏，而关键的运行时风险往往与少数高权限操作相关。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_4c563aea9279"
+            ],
+            "support": "supported",
+            "reason": "论文报告semantic-only不足，运行时攻击集中在exec/write_file/install_skill/spawn等高权限原语。"
+          },
+          {
+            "text": "由此可推演出一个合理的安全栈分层：安装时组合感知、运行时行为证据、权限原语收窄。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d",
+              "ev_4c563aea9279"
+            ],
+            "support": "supported",
+            "reason": "正文明确“可推演”，且各层均有前述证据支撑。"
+          },
+          {
+            "text": "三个层次互补：组合分析拦截明显的链条组装；运行时验证捕获实际执行中的恶意行为；权限收窄则提高攻击门槛。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "作者对防御架构的价值判断。"
+          },
+          {
+            "text": "当前开放问题集中在：条件触发与组合攻击的正交性缺乏统一建模；运行时探针的覆盖率成本——沙箱只能覆盖被激活的路径；未来方向是安装时依赖图分析与运行时污点推断结合。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "作者对开放问题和未来方向的判断，不要求外部证据。"
+          }
+        ],
+        "blocking_claims": [
+          {
+            "text": "单技能审计对 ColluSkill 的检出率约 4%。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "partial",
+            "reason": "证据仅有攻击成功率96%，未直接给出单技能检出率，该数字为反推，可能不精确。"
+          },
+          {
+            "text": "一个与“周报生成”相关的后门可能被触发于特定短语如“整合周三的进度到周报”，该短语在通用语料中罕见。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "具体例子为作者虚构，无外部证据支持“罕见”断言。"
+          },
+          {
+            "text": "SkillDetonate 在沙箱中执行技能，通过 OS 边界的信息流证据检测恶意行为，据报道对已知攻击有较高的检测率，且误报率较低。",
+            "kind": "reported_result",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "未提供任何证据或引用支撑SkillDetonate的检测结果。"
+          }
+        ],
+        "pass": false,
+        "round": 1
+      },
+      {
+        "claims": [
+          {
+            "text": "现有技能扫描器的检查单元是单个技能，会检查技能声明的指令、权限以及所附代码的行为以判断是否包含恶意意图",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要明确说明现有防御主要检查单个技能，包括其指令、权限、依赖和代码行为。"
+          },
+          {
+            "text": "这种单件审计在技能市场早期是合理的",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者的价值判断，不要求引用。"
+          },
+          {
+            "text": "攻击者通常会在一份技能里塞进完整的恶意载荷",
+            "kind": "fact",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是关于攻击者行为的普遍断言，没有提供证据。"
+          },
+          {
+            "text": "当攻击者将恶意意图拆解为多个表面无害的技能时，扫描器的分析单元就与攻击单元发生了结构性错配",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者基于单技能审计与跨技能组合攻击的差异推出的解释，文中明确表达为因果分析。"
+          },
+          {
+            "text": "以A→B→C链为例，Skill A读取目录结构并写入临时文件，Skill B读取临时文件格式化为Markdown，Skill C将内容POST到外部端点，单独扫描均通过，组合后实现敏感目录外泄",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "该示例是作者对跨技能组合攻击原理的说明，属于推断性解释，其核心思想（上下文依赖、工件传递）有摘要支持。"
+          },
+          {
+            "text": "ColluSkill框架的实验结果初步显示，这类攻击能够高度成功地避开单技能的检测",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要报告ColluSkill在六种扫描器上的平均攻击成功率为96.0%，说明其能高度成功地逃避单技能检测。"
+          },
+          {
+            "text": "在表格中，单技能审计对ColluSkill的攻击成功率达96%",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要明确给出ColluSkill的平均攻击成功率为96.0%，表格中该数据与此一致。"
+          },
+          {
+            "text": "在表格中，跨技能组合分析（ChainGuard）将攻击成功率降至22.5%",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要明确报告ChainGuard将攻击成功率降至22.5%。"
+          },
+          {
+            "text": "盲区并非扫描器不够聪明，而是攻击者把恶意语义存放在技能之间的组合空间，防御方尚未覆盖到这一层",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "这是作者对盲区本质的解释，基于跨技能组合攻击的成功实验推出。"
+          },
+          {
+            "text": "ColluSkill的核心机制是先利用LLM将恶意意图规划为相互依赖的子技能链，再通过扫描器反馈迭代漂白被标记的技能",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要描述了ColluSkill使用LLM进行链规划，并通过扫描器反馈细化以降低单个子技能的可疑信号。"
+          },
+          {
+            "text": "链式规划中，子技能间的关系通过上下文依赖、工件传递和执行交接三种途径实现",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要明确列出contextual dependencies, artifact passing, and execution handoffs。"
+          },
+          {
+            "text": "反馈驱动漂白中，ColluSkill基于扫描器反馈重写被标记技能，在保持链级攻击语义不变的前提下降低单个技能的可疑评分",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要描述scanner-feedback refinement to preserve chain-level semantics while reducing suspicious signals within sub-skills。"
+          },
+          {
+            "text": "可以推测，这种机制的威力来自攻击语义的分布式存储，没有一个子技能单独承载恶意标签，危险只出现在执行时技能间的信息流动中",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "文中明确使用“可以推测”，是作者的推断性解释。"
+          },
+          {
+            "text": "这也是为何传统静态分析对此几乎完全失明——它看到的永远是孤立的文件，而不是运行时会拼接成的图",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者对静态分析局限性的推断性解释。"
+          },
+          {
+            "text": "ElasticBack在单技能内部制造条件后门，激活依赖于用户查询中的触发短语T与技能文档中预埋的规则R的同时出现",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要明确说明ElasticBack是一个单技能后门，规则R植入技能文档，触发词T在用户查询中，两者共现时触发。"
+          },
+          {
+            "text": "规则R的注入是语义锚定的，使恶意规则看起来像对原有功能的自然扩展",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要提到通过semantic-anchored rule injection生成R。"
+          },
+          {
+            "text": "触发短语T通过遗传搜索优化生成，在冻结R的条件下寻找平衡触发有效性与隐蔽性的T",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要描述freeze R and evolve T with a stealth-constrained genetic search。"
+          },
+          {
+            "text": "ElasticBack的攻击完全在单技能内完成，不依赖其他技能",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要明确称为single-skill backdoor，且不依靠多技能或权重。"
+          },
+          {
+            "text": "因此ChainGuard这类组合扫描器对ElasticBack完全失明",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "这是作者基于ElasticBack单技能性质与ChainGuard组合分析单元的推断。"
+          },
+          {
+            "text": "这暴露出防御需要同时覆盖“空间分解”和“时间耦合”两个维度，否则攻击者总能将恶意语义搬进防御的缝隙",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者对两类攻击交织的防御需求的推断性总结。"
+          },
+          {
+            "text": "作者提出的ChainGuard通过联合分析候选技能与已安装技能的依赖、工件流和能力组合，可有效降低跨技能攻击的成功率，同时保持良好的良性工作流通行率",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要指出ChainGuard将攻击成功率降至22.5%，并允许99.5%的良性工作流通过。"
+          },
+          {
+            "text": "这意味着它将安全分析单元从单个技能提升到了技能图，有效地缩小了ColluSkill的生存空间",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者基于ChainGuard机制的分析推断。"
+          },
+          {
+            "text": "残余的攻击成功率表明，链级静态分析仍然有边界，尤其是当攻击者采用更隐蔽的单技能条件后门（如ElasticBack）时，组合视角完全无效",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者从残余成功率和ElasticBack特性推出的结论。"
+          },
+          {
+            "text": "更合理的理解是，安全验证必须从“技能长什么样”转变为“工作流实际做了什么”",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者提出的规范性判断。"
+          },
+          {
+            "text": "SkillVetBench的运行时验证阶段在沙箱中执行技能，通过收集OS边界的审计证据（如系统调用和文件操作）来检测恶意行为",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_4c563aea9279"
+            ],
+            "support": "supported",
+            "reason": "摘要说明第二阶段在instrumented sandbox中执行并收集auditable evidence。"
+          },
+          {
+            "text": "动态分析的挑战在于，若攻击嵌入条件触发（如ElasticBack），除非测试输入恰好命中触发短语，否则后门不会显露",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者对条件触发后门与沙箱测试局限性的推断。"
+          },
+          {
+            "text": "SkillVetBench的两阶段框架也初步提示了类似局限：静态语义分析可能有遗漏，而关键的运行时风险往往与少数高权限操作相关",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_4c563aea9279"
+            ],
+            "support": "supported",
+            "reason": "摘要指出语义基线可遗漏多达89%的恶意技能，且运行时攻击集中在少数高权限原语，因此该推断有证据支持。"
+          },
+          {
+            "text": "由此可推演出一个合理的安全栈分层：安装时组合感知、运行时行为证据以及权限原语收窄",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "文中明确使用“可推演出”，是作者的推断性方案。"
+          },
+          {
+            "text": "三个层次互补：组合分析拦截明显的链条组装；运行时验证捕获实际执行中的恶意行为；权限收窄提高攻击门槛",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者对分层防线作用的解释性推断。"
+          },
+          {
+            "text": "当前开放问题包括条件触发与组合攻击的正交性缺乏统一建模，以及运行时探针的覆盖率成本，沙箱只能覆盖被激活的路径",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者对现有防御局限性的分析推断。"
+          },
+          {
+            "text": "未来可能的方向是将安装时的依赖图分析与运行时的污点推断结合，同时逐步收紧高权限原语的默认授权",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "supported",
+            "reason": "这是作者提出的未来研究方向，属于建议性判断。"
+          }
+        ],
+        "blocking_claims": [
+          {
+            "text": "攻击者通常会在一份技能里塞进完整的恶意载荷",
+            "kind": "fact",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是关于攻击者行为的普遍断言，没有提供证据。"
+          }
+        ],
+        "pass": false,
+        "round": 2
+      },
+      {
+        "claims": [
+          {
+            "text": "现有技能扫描器的检查单元是单个技能；它们检查技能声明的指令、权限以及所附代码的行为，以判断是否包含恶意意图。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "论文摘要明确指出现有防御主要检查单个技能的指令、权限、依赖和代码行为。"
+          },
+          {
+            "text": "这种单件审计在技能市场早期或可理解。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "作者的价值判断，无需外部证据。"
+          },
+          {
+            "text": "当攻击者将恶意意图拆解为多个表面无害的技能时，扫描器的分析单元就与攻击单元发生了结构性错配。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要指出单技能检查会留下跨技能组合风险，作者据此推出结构性错配。"
+          },
+          {
+            "text": "ColluSkill 框架的实验结果初步显示，这类攻击能够高度成功地避开单技能的检测。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要报告 ColluSkill 在六个扫描器上平均攻击成功率达96.0%。"
+          },
+          {
+            "text": "单技能审计下，ColluSkill 攻击成功率达 96%。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要给出平均攻击成功率96.0%。"
+          },
+          {
+            "text": "跨技能组合分析（ChainGuard）可将攻击成功率降至 22.5%。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要报告 ChainGuard 将攻击成功率降至22.5%。"
+          },
+          {
+            "text": "ColluSkill 的规避方式是把恶意语义分解到多个技能中。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要描述 ColluSkill 将完整恶意意图分解为多个子载荷并嵌入独立技能。"
+          },
+          {
+            "text": "跨技能组合分析的防御下，攻击者需同时漂白整条链，难度大增。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是文章从反馈漂白机制推出的解释，无直接外部证据作为独立陈述。"
+          },
+          {
+            "text": "盲区并非扫描器不够聪明，而是攻击者把恶意语义存放在技能之间的组合空间，而防御方尚未覆盖到这一层。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要中 blind spot 与 cross-skill composition insufficiently examined 支持该解释。"
+          },
+          {
+            "text": "ElasticBack 将恶意藏进单技能的时间条件中。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要说明 ElasticBack 是条件性单技能后门，仅在触发词与规则同时出现时激活。"
+          },
+          {
+            "text": "ColluSkill 的核心机制分两步：先用 LLM 将恶意意图规划为相互依赖的子技能链，再通过扫描器反馈迭代漂白被标记的技能。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要提到 LLM-based chain planning 和 scanner-feedback refinement。"
+          },
+          {
+            "text": "链式规划将恶意目标分解为多个子载荷，并通过上下文依赖、工件传递和执行交接设计因果关系。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要明确列出 contextual dependencies, artifact passing, execution handoffs。"
+          },
+          {
+            "text": "A→B→C 示例中，A 将目录列表写入 /tmp/proj_tree.json，B 读取并嵌入 Markdown，C 将内容发送到外部端点。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是作者构造的简化示例，不属于外部可核实结果。"
+          },
+          {
+            "text": "反馈驱动漂白基于扫描器反馈重写被标记技能，在保持链级攻击语义不变的前提下降低单个技能的可疑评分。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要提到 scanner-feedback refinement 以降低单个子技能内可疑信号。"
+          },
+          {
+            "text": "例如，被标记的 C 技能描述会被改为“将格式化内容同步到团队频道”，同时确保 B 的输出仍能流入 C。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是文章给出的具体改写例子，非外部证据内容。"
+          },
+          {
+            "text": "可以推测，这种机制的威力来自攻击语义的分布式存储：没有一个子技能单独承载恶意标签，传统静态分析对此几乎完全失明。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "文章明确以“可以推测”引出，是解释性推断。"
+          },
+          {
+            "text": "ColluSkill 的威胁模型假设攻击者能部署多个技能。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要描述 ColluSkill 是一种多技能链攻击框架，需将子载荷嵌入多个技能。"
+          },
+          {
+            "text": "ElasticBack 在单技能内部制造条件后门，激活依赖用户查询中的触发短语 T 与技能文档中预埋规则 R 同时出现。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要明确说明 plants rule R in skill document and trigger T in user query, payload fires only when both co-occur。"
+          },
+          {
+            "text": "规则 R 的注入是语义锚定的，使其看起来像原有功能的自然扩展。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要提到 generating R via semantic-anchored rule injection。"
+          },
+          {
+            "text": "触发短语 T 通过遗传搜索优化生成：冻结 R，迭代搜索以平衡触发有效性与隐蔽性。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要提到 freezes R and evolves T via stealth-constrained genetic search。"
+          },
+          {
+            "text": "ElasticBack 的攻击完全在单技能内完成，不依赖其他技能。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要称其为 single-skill backdoor，不依赖多技能或微调权重。"
+          },
+          {
+            "text": "因此 ChainGuard 这类组合扫描器对 ElasticBack 完全失明。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "partial",
+            "reason": "摘要仅说 ElasticBack 能规避部署期防御，并未点名 ChainGuard；文章将其推断为“完全失明”。"
+          },
+          {
+            "text": "防御需要同时覆盖空间分解（ColluSkill）和时间耦合（ElasticBack）两个维度。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "作者提出的防御方向判断，无需外部证据。"
+          },
+          {
+            "text": "ChainGuard 通过联合分析候选技能与已安装技能的依赖、工件流和能力组合来识别风险。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要描述 ChainGuard jointly analyzes candidate and installed skills, reconstructs dependencies, artifact flows, capability compositions。"
+          },
+          {
+            "text": "ChainGuard 可有效降低跨技能攻击成功率，同时保持良好的良性工作流通行率。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要报告攻击成功率降至22.5%，且99.5%良性工作流通过。"
+          },
+          {
+            "text": "ChainGuard 将安全分析单元从单个技能提升到技能图，缩小了 ColluSkill 的生存空间。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要显示它进行跨技能依赖和工作流分析，作者由此推断分析单元提升到技能图。"
+          },
+          {
+            "text": "残余的攻击成功率表明，链级静态分析仍然有边界。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_a948aa17fb2d"
+            ],
+            "support": "supported",
+            "reason": "摘要中22.5%的残余成功率支持该推断。"
+          },
+          {
+            "text": "当攻击者采用单技能条件后门（如 ElasticBack）时，组合视角完全无效。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是作者对组合验证局限性的判断，基于 ElasticBack 的性质。"
+          },
+          {
+            "text": "安全验证必须从“技能长什么样”转变为“工作流实际做了什么”。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "作者提出的理念性判断。"
+          },
+          {
+            "text": "SkillVetBench 的运行时验证阶段在沙箱中执行技能，通过收集 OS 边界的审计证据（如系统调用和文件操作）检测恶意行为。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_4c563aea9279"
+            ],
+            "support": "partial",
+            "reason": "摘要确认沙箱执行与审计证据收集，但未明确提及‘OS边界’‘系统调用’‘文件操作’等具体细节。"
+          },
+          {
+            "text": "若攻击嵌入条件触发（如 ElasticBack），除非测试输入恰好命中触发短语，否则后门不会显露。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_03467c62cfe6"
+            ],
+            "support": "supported",
+            "reason": "摘要称该后门仅在 T 与 R 共现时触发，良性输入上保持休眠，支持该推断。"
+          },
+          {
+            "text": "SkillVetBench 的两阶段框架也初步提示了类似局限：静态语义分析可能有遗漏，而关键的运行时风险往往与少数高权限操作相关。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_4c563aea9279"
+            ],
+            "support": "supported",
+            "reason": "摘要报告纯语义/签名基线不足（漏检高达89%），且运行时攻击集中于 exec、write_file、install_skill、spawn 等高权限原语。"
+          },
+          {
+            "text": "由此可推演出合理的安全栈分层：安装时组合感知、运行时行为证据、权限原语收窄（默认不信任 exec/write_file/spawn，必须显式授权）。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_4c563aea9279"
+            ],
+            "support": "partial",
+            "reason": "前两层由前述工作支持，但‘默认不信任并显式授权’是作者的建议，不是证据中的陈述。"
+          },
+          {
+            "text": "三个层次互补：组合分析拦截链条组装，运行时验证捕获实际恶意行为，权限收窄提高攻击门槛。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "作者对安全栈层次的解释与价值判断。"
+          },
+          {
+            "text": "当前开放问题包括条件触发与组合攻击的正交性缺乏统一建模，以及运行时探针覆盖率成本；未来方向是结合依赖图分析与运行时污点推断并收紧高权限原语默认授权。",
+            "kind": "author_judgment",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "作者对开放问题与未来方向的总结判断。"
+          }
+        ],
+        "blocking_claims": [
+          {
+            "text": "跨技能组合分析的防御下，攻击者需同时漂白整条链，难度大增。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是文章从反馈漂白机制推出的解释，无直接外部证据作为独立陈述。"
+          },
+          {
+            "text": "A→B→C 示例中，A 将目录列表写入 /tmp/proj_tree.json，B 读取并嵌入 Markdown，C 将内容发送到外部端点。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是作者构造的简化示例，不属于外部可核实结果。"
+          },
+          {
+            "text": "例如，被标记的 C 技能描述会被改为“将格式化内容同步到团队频道”，同时确保 B 的输出仍能流入 C。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是文章给出的具体改写例子，非外部证据内容。"
+          },
+          {
+            "text": "可以推测，这种机制的威力来自攻击语义的分布式存储：没有一个子技能单独承载恶意标签，传统静态分析对此几乎完全失明。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "文章明确以“可以推测”引出，是解释性推断。"
+          },
+          {
+            "text": "SkillVetBench 的运行时验证阶段在沙箱中执行技能，通过收集 OS 边界的审计证据（如系统调用和文件操作）检测恶意行为。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_4c563aea9279"
+            ],
+            "support": "partial",
+            "reason": "摘要确认沙箱执行与审计证据收集，但未明确提及‘OS边界’‘系统调用’‘文件操作’等具体细节。"
+          }
+        ],
+        "pass": false,
+        "round": 3
+      }
+    ]
+  },
+  "claims": [
+    {
+      "id": "cl_7c64169fb5d5",
+      "text": "现有技能扫描器的检查单元是单个技能；它们检查技能声明的指令、权限以及所附代码的行为，以判断是否包含恶意意图。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "论文摘要明确指出现有防御主要检查单个技能的指令、权限、依赖和代码行为。"
+    },
+    {
+      "id": "cl_fbc2bbee1f81",
+      "text": "这种单件审计在技能市场早期或可理解。",
+      "kind": "author_judgment",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "作者的价值判断，无需外部证据。"
+    },
+    {
+      "id": "cl_55073e77733d",
+      "text": "当攻击者将恶意意图拆解为多个表面无害的技能时，扫描器的分析单元就与攻击单元发生了结构性错配。",
+      "kind": "inference",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要指出单技能检查会留下跨技能组合风险，作者据此推出结构性错配。"
+    },
+    {
+      "id": "cl_8035ee40c3ef",
+      "text": "ColluSkill 框架的实验结果初步显示，这类攻击能够高度成功地避开单技能的检测。",
+      "kind": "reported_result",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要报告 ColluSkill 在六个扫描器上平均攻击成功率达96.0%。"
+    },
+    {
+      "id": "cl_b4d48ee3ab2a",
+      "text": "单技能审计下，ColluSkill 攻击成功率达 96%。",
+      "kind": "reported_result",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要给出平均攻击成功率96.0%。"
+    },
+    {
+      "id": "cl_81f9a3b7313e",
+      "text": "跨技能组合分析（ChainGuard）可将攻击成功率降至 22.5%。",
+      "kind": "reported_result",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要报告 ChainGuard 将攻击成功率降至22.5%。"
+    },
+    {
+      "id": "cl_d78820621729",
+      "text": "ColluSkill 的规避方式是把恶意语义分解到多个技能中。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要描述 ColluSkill 将完整恶意意图分解为多个子载荷并嵌入独立技能。"
+    },
+    {
+      "id": "cl_2ba507ae9f38",
+      "text": "跨技能组合分析的防御下，攻击者需同时漂白整条链，难度大增。",
+      "kind": "inference",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "这是文章从反馈漂白机制推出的解释，无直接外部证据作为独立陈述。"
+    },
+    {
+      "id": "cl_a5b51af8c828",
+      "text": "盲区并非扫描器不够聪明，而是攻击者把恶意语义存放在技能之间的组合空间，而防御方尚未覆盖到这一层。",
+      "kind": "inference",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要中 blind spot 与 cross-skill composition insufficiently examined 支持该解释。"
+    },
+    {
+      "id": "cl_7f6b4d95cdee",
+      "text": "ElasticBack 将恶意藏进单技能的时间条件中。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_03467c62cfe6"
+      ],
+      "support": "supported",
+      "notes": "摘要说明 ElasticBack 是条件性单技能后门，仅在触发词与规则同时出现时激活。"
+    },
+    {
+      "id": "cl_a6915c6f3f21",
+      "text": "ColluSkill 的核心机制分两步：先用 LLM 将恶意意图规划为相互依赖的子技能链，再通过扫描器反馈迭代漂白被标记的技能。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要提到 LLM-based chain planning 和 scanner-feedback refinement。"
+    },
+    {
+      "id": "cl_033773ebdaa8",
+      "text": "链式规划将恶意目标分解为多个子载荷，并通过上下文依赖、工件传递和执行交接设计因果关系。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要明确列出 contextual dependencies, artifact passing, execution handoffs。"
+    },
+    {
+      "id": "cl_3318c23c7e99",
+      "text": "A→B→C 示例中，A 将目录列表写入 /tmp/proj_tree.json，B 读取并嵌入 Markdown，C 将内容发送到外部端点。",
+      "kind": "inference",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "这是作者构造的简化示例，不属于外部可核实结果。"
+    },
+    {
+      "id": "cl_467f25297c68",
+      "text": "反馈驱动漂白基于扫描器反馈重写被标记技能，在保持链级攻击语义不变的前提下降低单个技能的可疑评分。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要提到 scanner-feedback refinement 以降低单个子技能内可疑信号。"
+    },
+    {
+      "id": "cl_3df7761608b8",
+      "text": "例如，被标记的 C 技能描述会被改为“将格式化内容同步到团队频道”，同时确保 B 的输出仍能流入 C。",
+      "kind": "inference",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "这是文章给出的具体改写例子，非外部证据内容。"
+    },
+    {
+      "id": "cl_950a57a80029",
+      "text": "可以推测，这种机制的威力来自攻击语义的分布式存储：没有一个子技能单独承载恶意标签，传统静态分析对此几乎完全失明。",
+      "kind": "inference",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "文章明确以“可以推测”引出，是解释性推断。"
+    },
+    {
+      "id": "cl_0306f3a696d8",
+      "text": "ColluSkill 的威胁模型假设攻击者能部署多个技能。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要描述 ColluSkill 是一种多技能链攻击框架，需将子载荷嵌入多个技能。"
+    },
+    {
+      "id": "cl_2db7844f23d6",
+      "text": "ElasticBack 在单技能内部制造条件后门，激活依赖用户查询中的触发短语 T 与技能文档中预埋规则 R 同时出现。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_03467c62cfe6"
+      ],
+      "support": "supported",
+      "notes": "摘要明确说明 plants rule R in skill document and trigger T in user query, payload fires only when both co-occur。"
+    },
+    {
+      "id": "cl_73337945014c",
+      "text": "规则 R 的注入是语义锚定的，使其看起来像原有功能的自然扩展。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_03467c62cfe6"
+      ],
+      "support": "supported",
+      "notes": "摘要提到 generating R via semantic-anchored rule injection。"
+    },
+    {
+      "id": "cl_4b2639f79328",
+      "text": "触发短语 T 通过遗传搜索优化生成：冻结 R，迭代搜索以平衡触发有效性与隐蔽性。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_03467c62cfe6"
+      ],
+      "support": "supported",
+      "notes": "摘要提到 freezes R and evolves T via stealth-constrained genetic search。"
+    },
+    {
+      "id": "cl_4ef232cf8379",
+      "text": "ElasticBack 的攻击完全在单技能内完成，不依赖其他技能。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_03467c62cfe6"
+      ],
+      "support": "supported",
+      "notes": "摘要称其为 single-skill backdoor，不依赖多技能或微调权重。"
+    },
+    {
+      "id": "cl_6fcb4212e4a8",
+      "text": "因此 ChainGuard 这类组合扫描器对 ElasticBack 完全失明。",
+      "kind": "inference",
+      "evidence_ids": [
+        "ev_03467c62cfe6"
+      ],
+      "support": "partial",
+      "notes": "摘要仅说 ElasticBack 能规避部署期防御，并未点名 ChainGuard；文章将其推断为“完全失明”。"
+    },
+    {
+      "id": "cl_a60618b2f0a2",
+      "text": "防御需要同时覆盖空间分解（ColluSkill）和时间耦合（ElasticBack）两个维度。",
+      "kind": "author_judgment",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "作者提出的防御方向判断，无需外部证据。"
+    },
+    {
+      "id": "cl_d6befe752219",
+      "text": "ChainGuard 通过联合分析候选技能与已安装技能的依赖、工件流和能力组合来识别风险。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要描述 ChainGuard jointly analyzes candidate and installed skills, reconstructs dependencies, artifact flows, capability compositions。"
+    },
+    {
+      "id": "cl_8ffaf2c64146",
+      "text": "ChainGuard 可有效降低跨技能攻击成功率，同时保持良好的良性工作流通行率。",
+      "kind": "reported_result",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要报告攻击成功率降至22.5%，且99.5%良性工作流通过。"
+    },
+    {
+      "id": "cl_0897d48cda53",
+      "text": "ChainGuard 将安全分析单元从单个技能提升到技能图，缩小了 ColluSkill 的生存空间。",
+      "kind": "inference",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要显示它进行跨技能依赖和工作流分析，作者由此推断分析单元提升到技能图。"
+    },
+    {
+      "id": "cl_b4696779d1d3",
+      "text": "残余的攻击成功率表明，链级静态分析仍然有边界。",
+      "kind": "inference",
+      "evidence_ids": [
+        "ev_a948aa17fb2d"
+      ],
+      "support": "supported",
+      "notes": "摘要中22.5%的残余成功率支持该推断。"
+    },
+    {
+      "id": "cl_074f6d1a9289",
+      "text": "当攻击者采用单技能条件后门（如 ElasticBack）时，组合视角完全无效。",
+      "kind": "author_judgment",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "这是作者对组合验证局限性的判断，基于 ElasticBack 的性质。"
+    },
+    {
+      "id": "cl_6c27744116a0",
+      "text": "安全验证必须从“技能长什么样”转变为“工作流实际做了什么”。",
+      "kind": "author_judgment",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "作者提出的理念性判断。"
+    },
+    {
+      "id": "cl_8c434e61464a",
+      "text": "SkillVetBench 的运行时验证阶段在沙箱中执行技能，通过收集 OS 边界的审计证据（如系统调用和文件操作）检测恶意行为。",
+      "kind": "fact",
+      "evidence_ids": [
+        "ev_4c563aea9279"
+      ],
+      "support": "partial",
+      "notes": "摘要确认沙箱执行与审计证据收集，但未明确提及‘OS边界’‘系统调用’‘文件操作’等具体细节。"
+    },
+    {
+      "id": "cl_53a579c7ffc6",
+      "text": "若攻击嵌入条件触发（如 ElasticBack），除非测试输入恰好命中触发短语，否则后门不会显露。",
+      "kind": "inference",
+      "evidence_ids": [
+        "ev_03467c62cfe6"
+      ],
+      "support": "supported",
+      "notes": "摘要称该后门仅在 T 与 R 共现时触发，良性输入上保持休眠，支持该推断。"
+    },
+    {
+      "id": "cl_5637e27de344",
+      "text": "SkillVetBench 的两阶段框架也初步提示了类似局限：静态语义分析可能有遗漏，而关键的运行时风险往往与少数高权限操作相关。",
+      "kind": "reported_result",
+      "evidence_ids": [
+        "ev_4c563aea9279"
+      ],
+      "support": "supported",
+      "notes": "摘要报告纯语义/签名基线不足（漏检高达89%），且运行时攻击集中于 exec、write_file、install_skill、spawn 等高权限原语。"
+    },
+    {
+      "id": "cl_22af8897bfec",
+      "text": "由此可推演出合理的安全栈分层：安装时组合感知、运行时行为证据、权限原语收窄（默认不信任 exec/write_file/spawn，必须显式授权）。",
+      "kind": "inference",
+      "evidence_ids": [
+        "ev_4c563aea9279"
+      ],
+      "support": "partial",
+      "notes": "前两层由前述工作支持，但‘默认不信任并显式授权’是作者的建议，不是证据中的陈述。"
+    },
+    {
+      "id": "cl_2ae11cd21ebc",
+      "text": "三个层次互补：组合分析拦截链条组装，运行时验证捕获实际恶意行为，权限收窄提高攻击门槛。",
+      "kind": "author_judgment",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "作者对安全栈层次的解释与价值判断。"
+    },
+    {
+      "id": "cl_7ca362ff35cc",
+      "text": "当前开放问题包括条件触发与组合攻击的正交性缺乏统一建模，以及运行时探针覆盖率成本；未来方向是结合依赖图分析与运行时污点推断并收紧高权限原语默认授权。",
+      "kind": "author_judgment",
+      "evidence_ids": [],
+      "support": "unsupported",
+      "notes": "作者对开放问题与未来方向的总结判断。"
+    }
+  ],
+  "date": "2026-08-12"
+}

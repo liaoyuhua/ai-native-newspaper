@@ -1,0 +1,70 @@
+{
+  "topics": [
+    {
+      "topic_id": "cross-skill-composition-blindspot",
+      "display_name": "跨技能组合攻击与组合验证防御",
+      "aliases": [
+        "组合攻击盲区",
+        "跨技能扫描规避",
+        "agent技能供应链安全",
+        "工作流安全验证",
+        "跨技能组合攻击为什么会成为 agent 技能扫描器的盲区？能否通过组合验证来防御？",
+        "技能供应链安全",
+        "运行时行为审计",
+        "权限原语收窄",
+        "Agent技能盲区",
+        "组合验证局限性"
+      ],
+      "one_line_summary": "Agent技能安全需三层防线：安装时组合感知分析降低跨技能攻击，运行时行为验证补足条件后门与混淆规避，权限面收窄高权限原语默认授权；单一防线均存在盲区，现实威胁正从单技能转向组合与时间维度。",
+      "standing_open_questions": [
+        "组合分析的可扩展性与残余风险：ChainGuard将ASR降至22.5%，但联合分析的计算成本与误报控制如何随安装基数扩展？",
+        "条件触发与组合攻击的正交性尚未统一建模：ElasticBack与ChainGuard各覆盖不同盲区，如何构建统一验证框架？",
+        "运行时验证的探针覆盖与生态成本：收窄高权限原语默认授权与扩大运行时探针覆盖，哪个能以更低摩擦获得更大风险削减？"
+      ],
+      "last_week_id": "2026-W33",
+      "coverage_count": 1
+    },
+    {
+      "topic_id": "agent-runtime-infrastructure",
+      "display_name": "AI Agent 运行基础设施：持久状态、沙箱与全渠道接入",
+      "aliases": [
+        "agent 底座",
+        "agent 操作系统",
+        "agent 运行时",
+        "durable execution",
+        "agent 持久状态",
+        "agent 沙箱隔离",
+        "agent 记忆基础设施",
+        "agent 基础设施三层",
+        "AI Agent 运行基础设施：持久状态、沙箱与全渠道接入",
+        "agent runtime",
+        "agent 运行底座",
+        "agent 沙箱",
+        "checkpoint/restore",
+        "stateful agent",
+        "agent 记忆安全",
+        "agent 隔离",
+        "agent infrastructure",
+        "agent 运行时基础设施",
+        "agent runtime infrastructure",
+        "agent 持久状态与沙箱",
+        "agent checkpoint/restore",
+        "agent 中介层/观测记账",
+        "agent gatekeeper",
+        "agent 实例化",
+        "agent 全渠道接入"
+      ],
+      "one_line_summary": "议程已从「状态存哪、怎么隔离」推进到「谁在中间记账、实例从哪来」：观测级中介（观察先登记、副作用 submit/simulate/apply 先模拟后人批）被 Cloudflare Gatekeepers 首次工程化闭环，实例化出现引用式范式（Aethon）；设计顺序变为先找门卫、再砌墙、最后定状态，loopx/celld/Aethon 三范式分别回答控制流表示、状态物化位置、实例诞生方式，预计不互相淘汰而落在中介对象的不同实现选择上。",
+      "standing_open_questions": [
+        "Gatekeepers 的 authorizeObservation/submit/simulate/apply 契约目前只在 Cloudflare 栈（Worker+DO+Cap'n Web RPC）内成立：这套「观测记账+模拟审批」能否脱离 Durable Objects 被标准化（MCP 扩展或独立规范）？模拟保真度边界在哪——外部状态被他人并发修改时，「假装已生效」的读回会否污染 agent 后续决策（与 SDB 的 replay divergence 同源但发生在审批队列侧）？",
+        "loopx/celld/Aethon 三范式无共享基准：同一长任务下的恢复正确性、状态体积、交接可验证性、崩溃语义从未被同设定测量；尤其 Aethon 的 overlay 与共享记忆层写冲突/一致性在可核实部分无实验回答",
+        "gadget「每用户私有实例+自由改代码」把供应链内生化：非工程师让 agent 改自己应用时谁审 gadget 代码？批量审批 UX 下人类实际审稿率的实证数据完全空白——审批会不会沦为下一个「一律点同意」对话框？",
+        "（延续）Checkpoint 内容治理：快照可能含敏感数据或恶意持久化内容，其审计、过滤、访问控制完全空白——观测记账在 gatekeeper 层闭环后，快照层成为更突出的盲区",
+        "（延续）记忆 origin 绑定的工程化：agent 自我重写记忆时 origin 链如何保持、信任分级边界、多 agent 场景传播；TMA-NM 有 TLA+ 验证但无开源实现与基准"
+      ],
+      "last_week_id": "2026-W33",
+      "coverage_count": 1
+    }
+  ],
+  "updated_at": "2026-08-12T05:54:26Z"
+}

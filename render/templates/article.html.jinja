@@ -1,0 +1,70 @@
+{% extends "base.html.jinja" %}
+
+{% block title %}{{ article.title }} · {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="layout">
+    <article>
+      <div class="article-header">
+        <div class="article-header__meta">{{ week_label }} · {{ article.topic_name }}</div>
+        <h1>{{ article.title }}</h1>
+        {% if article.subtitle %}<p class="article-header__subtitle">{{ article.subtitle }}</p>{% endif %}
+        <p class="article-header__date">{{ publish_date }}</p>
+      </div>
+
+      {% if article.featured_works %}
+      <div class="featured-works">
+        <p class="featured-works__title">本期精选工作</p>
+        <ul>
+          {% for w in article.featured_works %}
+          <li>
+            <a href="{{ w.url }}" target="_blank" rel="noopener">{{ w.title }}</a>{% if w.citation_number %} <span>[{{ w.citation_number }}]</span>{% endif %}
+            {% if w.why_relevant %}<div class="why">{{ w.why_relevant }}</div>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <div class="article-body">
+        {% for section in article.sections %}
+        <h2 id="section-{{ loop.index }}">{{ section.heading }}</h2>
+        {{ section.html | safe }}
+        {% endfor %}
+      </div>
+
+      {% if article.open_questions %}
+      <div class="section-block open-questions">
+        <h2>开放问题</h2>
+        <ul>
+          {% for q in article.open_questions %}
+          <li>{{ q }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if article.bibliography %}
+      <div class="section-block">
+        <h2>参考文献</h2>
+        <ol class="bibliography">
+          {% for ref in article.bibliography %}
+          <li id="ref-{{ ref.number }}"><a href="{{ ref.url }}" target="_blank" rel="noopener">{{ ref.title }}</a></li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% endif %}
+    </article>
+
+    <nav class="toc">
+      <p class="toc__title">目录</p>
+      <ol>
+        {% for section in article.sections %}
+        <li><a href="#section-{{ loop.index }}">{{ section.heading }}</a></li>
+        {% endfor %}
+      </ol>
+    </nav>
+  </div>
+</div>
+{% endblock %}

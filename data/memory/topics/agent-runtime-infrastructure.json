@@ -1,0 +1,122 @@
+{
+  "topic_id": "agent-runtime-infrastructure",
+  "display_name": "AI Agent 运行基础设施：持久状态、沙箱与全渠道接入",
+  "aliases": [
+    "agent 底座",
+    "agent 操作系统",
+    "agent 运行时",
+    "durable execution",
+    "agent 持久状态",
+    "agent 沙箱隔离",
+    "agent 记忆基础设施",
+    "agent 基础设施三层",
+    "AI Agent 运行基础设施：持久状态、沙箱与全渠道接入",
+    "agent runtime",
+    "agent 运行底座",
+    "agent 沙箱",
+    "checkpoint/restore",
+    "stateful agent",
+    "agent 记忆安全",
+    "agent 隔离",
+    "agent infrastructure",
+    "agent 运行时基础设施",
+    "agent runtime infrastructure",
+    "agent 持久状态与沙箱",
+    "agent checkpoint/restore",
+    "agent 中介层/观测记账",
+    "agent gatekeeper",
+    "agent 实例化",
+    "agent 全渠道接入"
+  ],
+  "coverage": [
+    {
+      "week_id": "2026-W33",
+      "article_title": "先找门卫，再砌墙：Agent 基础设施开始给「每一次看」记账",
+      "covered_angles": [
+        "观测级中介的首个工程化闭环：Gatekeepers 三层结构（Vendor→User→Instance，按「资源×gadget 实例」绑定的 Durable Object facet）+ authorizeObservation() 让只读观察也要授权留痕 + submit/simulate/apply 三段式副作用契约（已提交未批准的动作读回时假装生效，agent 不停工、人类批量审批后 apply），授权粒度细到单个文档/仓库/issue；Cloudflare 内部数千人日用，v2 为吸取 v1 教训的完全重写，2026-08 开源",
+        "「先找门卫，再砌墙」的设计顺序论：先问中介在哪一层、每次观察有没有记账，再问隔离粒度，最后才问状态存哪——墙砌得再细，墙内 agent 实际读到哪份文档的哪一段对墙外仍不可见",
+        "gadget 模型对 25 年 SaaS 集中式架构的公开背离：每用户私有应用实例+自由改代码，应用自身有安全 bug 也无法跨实例泄漏；供应链问题随之内生化（官方 SKILL.md 要求新 gatekeeper API 先人审，gadget 代码本身无此门禁）",
+        "三种状态范式的重新定性而非互搏：loopx（应用层显式控制状态——看板只是投影、卡片承载 identity/authority/evidence/continuation，claim/gate/monitor/writeback validated operators，claims+leases+typed continuation 实现无持久领导者的多 agent 交接，quota-aware auto-wake，实证 200+ 小时壁钟循环）、celld（基础设施层物化持久对象——每对象独立 SQLite、桶即协调者、对象存储 CAS 认领所有权、秒级租约接管、「证据在你的磁盘上」可 grep 审计）、Aethon（引用式组合视图——实例=稳定定义+分层记忆+局部 overlay，创建近常数时间、成本与继承规模解耦，首个把实例化本身当运行时原语；评估数字未核实故未引用）",
+        "渠道层分工的确认：CopilotKit Channels SDK 把会话连续性有意留给用户自有长驻进程、渠道只做投递与原生交互渲染——跨渠道连续性来自后接的状态层而非渠道 SDK；凭证不进 CLI（只留 .env），agent 可驱动已登录浏览器会话自完成配置，Channels 与 Runtime 作为测试过的配对一起升级"
+      ],
+      "key_works_covered": [
+        {
+          "title": "Cloudflare OS v2 Gatekeepers（write-gatekeeper SKILL.md + README）",
+          "url": "https://github.com/cloudflare/cloudflare-os",
+          "note": "观测级可见性与按 scope 撤销开放问题的首个工程化闭环；三层中介+观测记账+模拟审批，gadget 每用户私有实例公开背离 SaaS 集中式架构"
+        },
+        {
+          "title": "Aethon: A Reference-Based Replication Primitive for Constant-Time Instantiation of Stateful AI Agents",
+          "url": "https://arxiv.org/abs/2604.12129",
+          "note": "与 loopx/celld 正交的第三范式：实例=稳定定义+分层记忆+局部 overlay 的引用式组合视图，实例化成本与继承规模解耦；仅核实到摘要/引言级主张"
+        },
+        {
+          "title": "loopx: Lightweight loop engineering state kernel for long-running AI agent teams",
+          "url": "https://github.com/huangruiteng/loopx",
+          "note": "应用层显式控制状态路线当前代表；provider-neutral 本地优先控制面，交接的是结构化控制状态而非聊天记录；危险权限与生产写入红线留人"
+        },
+        {
+          "title": "celld: self-hosted, distributed Durable Objects（denoland）",
+          "url": "https://celld.dev",
+          "note": "基础设施层持久对象的自托管化：桶即协调者、CAS 所有权、秒级恢复；可审计性卖点与 Gatekeepers 观测记账跨层呼应，gatekeeper 的 Instance facet 可直接落在 cell 上"
+        },
+        {
+          "title": "CopilotKit Channels SDK: Bring Any Agent to Any Channel",
+          "url": "https://github.com/CopilotKit/channels-sdk",
+          "note": "AG-UI agent 进 Slack/Teams/Discord/Telegram；架构上刻意把状态连续性留在用户长驻进程，暴露「渠道只投递」的渠道层事实"
+        }
+      ],
+      "open_questions": [
+        "Gatekeepers 的 authorizeObservation/submit/simulate/apply 契约目前只在 Cloudflare 栈（Worker+DO+Cap'n Web RPC）内成立：这套「观测记账+模拟审批」能否脱离 Durable Objects 被标准化（MCP 扩展或独立规范）？模拟保真度边界在哪——外部状态被他人并发修改时，「假装已生效」的读回会否污染 agent 后续决策（与 SDB 的 replay divergence 同源但发生在审批队列侧）？",
+        "loopx/celld/Aethon 三范式无共享基准：同一长任务下的恢复正确性、状态体积、交接可验证性、崩溃语义从未被同设定测量；尤其 Aethon 的 overlay 与共享记忆层写冲突/一致性在可核实部分无实验回答",
+        "gadget「每用户私有实例+自由改代码」把供应链内生化：非工程师让 agent 改自己应用时谁审 gadget 代码？批量审批 UX 下人类实际审稿率的实证数据完全空白——审批会不会沦为下一个「一律点同意」对话框？",
+        "（延续）Checkpoint 内容治理：快照可能含敏感数据或恶意持久化内容，其审计、过滤、访问控制完全空白——观测记账在 gatekeeper 层闭环后，快照层成为更突出的盲区",
+        "（延续）记忆 origin 绑定的工程化：agent 自我重写记忆时 origin 链如何保持、信任分级边界、多 agent 场景传播；TMA-NM 有 TLA+ 验证但无开源实现与基准",
+        "（延续）训练-运行时对齐标准化：仍无框架/数据集标注轨迹生成于持久/无状态环境，模型卡片是否应声明解释器持久性无动向",
+        "（延续）执行安全缺共享评估：隔离架构与能力模型仍不在同一对抗基准互测，69%–98% 策略执行失败率未被重测，17.1% 良性越界行为无访问控制工作覆盖"
+      ],
+      "follow_up_signals": [
+        "Gatekeepers 契约跨生态化：MCP/A2A/AG-UI 任一协议加入观测级权限、跨会话审计或模拟审批扩展；出现非 Durable Objects 的实现（如基于 celld/自托管栈）或独立规范；OCI 层面 agent 中介/沙箱规范浮现",
+        "审批队列侧模拟失真引发公开事故，或出现 simulate 保真度/审批版 replay divergence 的研究与缓解方案",
+        "三状态范式首个共享基准或同设定对比（恢复正确性/状态体积/崩溃语义）发布；Aethon 评估被第三方复现，或 overlay 写冲突/一致性实验出现",
+        "批量审批实证数据（人类审稿率、审批疲劳、「一律点同意」行为）公开；gadget/私有实例代码导致供应链公开事件，或 gadget 代码审查工具出现",
+        "「每用户私有实例/gadget」模式被头部 SaaS 或模型厂商产品化；celld 类自托管 DO 被主流采用（尤其用于承接 gatekeeper facet）",
+        "K8s agent-sandbox 引入原生 checkpoint/restore（CRIU/eBPF 集成）或 Sandbox CRD API 毕业；Crab 类语义感知 C/R 被主流框架或云厂商产品化——恢复派 vs 弃疗派收敛或分出胜负",
+        "出现首个针对 checkpoint 快照内容的审计/过滤工具或论文，或快照内容泄露/投毒公开事件",
+        "origin-bound 记忆出现开源实现与基准；LangMem/Zep/MemGPT 系加入写入时 origin 绑定；或出现针对 origin 绑定本身的绕过/洗白研究",
+        "「防御反转」被复现或扩展（更多模型因防御改变推理路径而 ASR 不降反升），或防御感知的持久记忆攻击变体出现",
+        "训练侧出现运行时语义标注（框架/数据集标注轨迹持久性假设），或头部厂商在模型卡片声明解释器持久性",
+        "Zombie Agents 类跨会话记忆投毒在真实产品中披露（CVE、厂商安全公告、事件复盘）",
+        "执行安全出现共享对抗基准：隔离方案与能力模型同设定互测、策略执行失败率被公开重测压低，或良性越界首次被访问控制工作覆盖"
+      ],
+      "avoid_repeating": [
+        "三层（状态/隔离/渠道）框架本身与「重演操作系统三十年分层」类比——直接引用",
+        "「谁建模、谁恢复」分野与三条状态路线的科普式对比（loopx/Durable Objects+Celld/Temporal 已逐一介绍）",
+        "「浏览器为人设计、对 agent 是浪费」论证、Kitesurf 案例与 isolate→microVM→VM 粒度光谱基础铺陈",
+        "MCP/A2A/AG-UI 三角分工与「能连已不是问题」的渠道层结论——除非协议有实质性安全/治理扩展",
+        "Zombie Agents 攻击流程完整复述——只引用结论（持久记忆=攻击面、按会话防御失效）",
+        "Durable Objects、Temporal、LangGraph checkpoint/store、MemGPT 等基础概念解释——默认读者已知",
+        "「有效状态=对话历史+OS 副作用」与 agent-OS semantic gap 的论证及 Crab 的 8%/75%/87% 数据铺陈——后续引用结论",
+        "spot 回收 running example、「远程外包工程师写日报」类比，以及本期小王/小李 slides+GitHub 看板的场景设定——均勿重讲",
+        "「救回机器 vs 扔掉机器」（K8s agent-sandbox vs Docker Sandboxes）路线对比的基本铺陈",
+        "TMA-NM 三条洗白通道（摘要/回声/佐证）机制解释与跨层评测「输入/检索层无效、工具门控唯一有效」的论证过程——引用结论，聚焦工程化或新绕过",
+        "SDB 四部契约、replay divergence、Interpreter Persistence 2×2 实验设定与两类故障模式（级联/遗忘税）的定义性解释——给一句话指针即可",
+        "Gatekeepers 三层结构（Vendor→User→Instance）、authorizeObservation 与 submit/simulate/apply 契约的机制细节、「先找门卫再砌墙」提问顺序的论证过程——后续引用结论",
+        "gadget「每用户私有实例 vs SaaS 集中式」架构翻转的完整论证",
+        "Aethon 引用式实例化机制（签发身份→挂两组引用→overlay）与「实例化税」铺垫；loopx 看板操作子语义与 celld 桶协调/CAS 租约机制细节",
+        "Channels SDK「渠道只投递、状态连续性在长驻进程」的分工结论与凭证设计细节"
+      ]
+    }
+  ],
+  "one_line_summary": "议程已从「状态存哪、怎么隔离」推进到「谁在中间记账、实例从哪来」：观测级中介（观察先登记、副作用 submit/simulate/apply 先模拟后人批）被 Cloudflare Gatekeepers 首次工程化闭环，实例化出现引用式范式（Aethon）；设计顺序变为先找门卫、再砌墙、最后定状态，loopx/celld/Aethon 三范式分别回答控制流表示、状态物化位置、实例诞生方式，预计不互相淘汰而落在中介对象的不同实现选择上。",
+  "standing_open_questions": [
+    "Gatekeepers 的 authorizeObservation/submit/simulate/apply 契约目前只在 Cloudflare 栈（Worker+DO+Cap'n Web RPC）内成立：这套「观测记账+模拟审批」能否脱离 Durable Objects 被标准化（MCP 扩展或独立规范）？模拟保真度边界在哪——外部状态被他人并发修改时，「假装已生效」的读回会否污染 agent 后续决策（与 SDB 的 replay divergence 同源但发生在审批队列侧）？",
+    "loopx/celld/Aethon 三范式无共享基准：同一长任务下的恢复正确性、状态体积、交接可验证性、崩溃语义从未被同设定测量；尤其 Aethon 的 overlay 与共享记忆层写冲突/一致性在可核实部分无实验回答",
+    "gadget「每用户私有实例+自由改代码」把供应链内生化：非工程师让 agent 改自己应用时谁审 gadget 代码？批量审批 UX 下人类实际审稿率的实证数据完全空白——审批会不会沦为下一个「一律点同意」对话框？",
+    "（延续）Checkpoint 内容治理：快照可能含敏感数据或恶意持久化内容，其审计、过滤、访问控制完全空白——观测记账在 gatekeeper 层闭环后，快照层成为更突出的盲区",
+    "（延续）记忆 origin 绑定的工程化：agent 自我重写记忆时 origin 链如何保持、信任分级边界、多 agent 场景传播；TMA-NM 有 TLA+ 验证但无开源实现与基准",
+    "（延续）训练-运行时对齐标准化：仍无框架/数据集标注轨迹生成于持久/无状态环境，模型卡片是否应声明解释器持久性无动向",
+    "（延续）执行安全缺共享评估：隔离架构与能力模型仍不在同一对抗基准互测，69%–98% 策略执行失败率未被重测，17.1% 良性越界行为无访问控制工作覆盖"
+  ],
+  "updated_at": "2026-08-11T05:45:49Z"
+}

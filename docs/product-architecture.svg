@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">深潜 AI 周刊产品架构</title>
+  <desc id="desc">系统从公开技术信号中发现重要选题，经编辑决策、深度研究、证据核查、写作和冷启动读者审稿，最终发布每周短深文，并将编辑记忆反馈给下一周。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffdf9"/>
+      <stop offset="1" stop-color="#f2ece2"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9a3324"/>
+      <stop offset="1" stop-color="#c96b52"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#5c4235" flood-opacity=".10"/>
+    </filter>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="#9a3324"/>
+    </marker>
+    <style>
+      .sans{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif}
+      .serif{font-family:"Songti SC","Noto Serif SC",Georgia,serif}
+      .title{font-size:30px;font-weight:700;fill:#1c1b19}
+      .subtitle{font-size:16px;fill:#696159}
+      .stage{font-size:18px;font-weight:700;fill:#282521}
+      .copy{font-size:14px;fill:#696159}
+      .index{font-size:13px;font-weight:700;fill:#fff;letter-spacing:.08em}
+      .rail{font-size:14px;font-weight:600;fill:#9a3324}
+    </style>
+  </defs>
+  <rect width="1200" height="620" rx="28" fill="url(#bg)"/>
+  <circle cx="1080" cy="78" r="116" fill="#9a3324" opacity=".045"/>
+  <circle cx="92" cy="560" r="150" fill="#c96b52" opacity=".045"/>
+
+  <text x="64" y="72" class="serif title">从一周的 AI 噪声，到一个值得理解的问题</text>
+  <text x="64" y="104" class="sans subtitle">选题判断与深度写作协作，把公开信号转化为可信、可读、有判断的 Weekly Deep Dive</text>
+
+  <path d="M196 284 H266 M426 284 H496 M656 284 H726 M886 284 H956" stroke="#9a3324" stroke-width="2.5" marker-end="url(#arrow)" opacity=".8"/>
+
+  <g filter="url(#shadow)">
+    <rect x="46" y="174" width="150" height="220" rx="18" fill="#fff" stroke="#e4ddd1"/>
+    <rect x="276" y="174" width="150" height="220" rx="18" fill="#fff" stroke="#e4ddd1"/>
+    <rect x="506" y="174" width="150" height="220" rx="18" fill="#fff" stroke="#e4ddd1"/>
+    <rect x="736" y="174" width="150" height="220" rx="18" fill="#fff" stroke="#e4ddd1"/>
+    <rect x="966" y="174" width="188" height="220" rx="18" fill="#2b2926"/>
+  </g>
+
+  <g class="sans">
+    <circle cx="83" cy="212" r="18" fill="url(#accent)"/><text x="83" y="217" text-anchor="middle" class="index">01</text>
+    <text x="70" y="260" class="stage">信号雷达</text>
+    <text x="70" y="290" class="copy"><tspan x="70">论文、实验室博客</tspan><tspan x="70" dy="22">开源与技术讨论</tspan></text>
+    <path d="M72 340 C92 314 116 358 146 318" fill="none" stroke="#c96b52" stroke-width="3"/>
+    <circle cx="72" cy="340" r="4" fill="#9a3324"/><circle cx="146" cy="318" r="4" fill="#9a3324"/>
+
+    <circle cx="313" cy="212" r="18" fill="url(#accent)"/><text x="313" y="217" text-anchor="middle" class="index">02</text>
+    <text x="300" y="260" class="stage">编辑决策</text>
+    <text x="300" y="290" class="copy"><tspan x="300">重要吗？新在哪里？</tspan><tspan x="300" dy="22">这一周值得写吗？</tspan></text>
+    <path d="M302 338 l14 14 35-40" fill="none" stroke="#9a3324" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <circle cx="543" cy="212" r="18" fill="url(#accent)"/><text x="543" y="217" text-anchor="middle" class="index">03</text>
+    <text x="530" y="260" class="stage">深度研究</text>
+    <text x="530" y="290" class="copy"><tspan x="530">追溯一手来源</tspan><tspan x="530" dy="22">拆解 1–2 个机制</tspan></text>
+    <circle cx="558" cy="330" r="21" fill="none" stroke="#9a3324" stroke-width="3"/><path d="M574 346 l20 20" stroke="#9a3324" stroke-width="4" stroke-linecap="round"/>
+
+    <circle cx="773" cy="212" r="18" fill="url(#accent)"/><text x="773" y="217" text-anchor="middle" class="index">04</text>
+    <text x="760" y="260" class="stage">多重审稿</text>
+    <text x="760" y="290" class="copy"><tspan x="760">事实与推断分离</tspan><tspan x="760" dy="22">陌生读者也能读懂</tspan></text>
+    <rect x="763" y="326" width="49" height="34" rx="4" fill="none" stroke="#9a3324" stroke-width="3"/><path d="M774 338 h27 M774 348 h20" stroke="#c96b52" stroke-width="2"/>
+
+    <circle cx="1003" cy="212" r="18" fill="url(#accent)"/><text x="1003" y="217" text-anchor="middle" class="index">05</text>
+    <text x="990" y="260" class="stage" fill="#fff">每周短深文</text>
+    <text x="990" y="290" class="copy" fill="#d7d0c7"><tspan x="990">8–15 分钟阅读</tspan><tspan x="990" dy="22">带走一个新世界模型</tspan></text>
+    <path d="M991 333 h93 M991 346 h76 M991 359 h84" stroke="#c96b52" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <path d="M1060 418 C1060 520 245 522 245 420" fill="none" stroke="#9a3324" stroke-width="2" stroke-dasharray="7 8" marker-end="url(#arrow)"/>
+  <rect x="506" y="474" width="234" height="54" rx="27" fill="#fff" stroke="#d7c9bb"/>
+  <text x="623" y="507" text-anchor="middle" class="sans rail">Topic Memory · 每周积累编辑判断</text>
+  <text x="600" y="578" text-anchor="middle" class="sans subtitle">没有题目越过质量门槛时，系统选择不发布。</text>
+</svg>

@@ -1,0 +1,54 @@
+name: weekly-proposal
+
+on:
+  schedule:
+    # 每周一 00:30 UTC = 北京时间 08:30，可按需调整
+    - cron: "30 0 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  scan-and-propose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 广度扫描 + 选题 + 生成提案
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_EXTRA_KWARGS: ${{ secrets.LLM_EXTRA_KWARGS }}
+          LLM_TEMPERATURE: ${{ secrets.LLM_TEMPERATURE }}
+          LLM_CHEAP_API_KEY: ${{ secrets.LLM_CHEAP_API_KEY }}
+          LLM_CHEAP_BASE_URL: ${{ secrets.LLM_CHEAP_BASE_URL }}
+          LLM_CHEAP_MODEL: ${{ secrets.LLM_CHEAP_MODEL }}
+          LLM_MID_MODEL: ${{ secrets.LLM_MID_MODEL }}
+          LLM_MODEL_TOPIC_CLUSTERING: ${{ secrets.LLM_MODEL_TOPIC_CLUSTERING }}
+          LLM_MODEL_TOPIC_SCORING: ${{ secrets.LLM_MODEL_TOPIC_SCORING }}
+          TOPIC_SHORTLIST_SIZE: ${{ secrets.TOPIC_SHORTLIST_SIZE }}
+          TOPIC_PROBE_SIZE: ${{ secrets.TOPIC_PROBE_SIZE }}
+          TOPIC_PROBE_DOCS_PER_CANDIDATE: ${{ secrets.TOPIC_PROBE_DOCS_PER_CANDIDATE }}
+          TOPIC_MIN_EDITORIAL_SCORE: ${{ secrets.TOPIC_MIN_EDITORIAL_SCORE }}
+          TOPIC_MIN_FEASIBILITY_SCORE: ${{ secrets.TOPIC_MIN_FEASIBILITY_SCORE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python main_scan.py
+
+      - name: 提交本周提案
+        run: |
+          git config user.name "ai-native-newspaper-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/proposals/ data/memory/ data/runs/
+          git diff --cached --quiet || git commit -m "chore: 本周选题提案"
+          git push

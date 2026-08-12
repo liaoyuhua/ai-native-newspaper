@@ -1,0 +1,341 @@
+/* 深潜 AI 周刊 —— 清爽、可读性优先的技术博客美学 */
+
+:root {
+  --bg: #fdfcfa;
+  --bg-elevated: #f6f3ee;
+  --ink: #1c1b19;
+  --ink-soft: #56534d;
+  --accent: #9a3324;
+  --accent-soft: #c96b52;
+  --border: #e4ddd1;
+  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", Georgia, "Times New Roman", serif;
+  --sans: "PingFang SC", "Helvetica Neue", Arial, "Hiragino Sans GB", sans-serif;
+  --mono: "SF Mono", "Menlo", "Consolas", monospace;
+  --content-width: 700px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16151a;
+    --bg-elevated: #1e1d23;
+    --ink: #eae7e1;
+    --ink-soft: #a8a39a;
+    --accent: #e08a72;
+    --accent-soft: #c96b52;
+    --border: #33313a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-soft);
+}
+
+a:hover {
+  color: var(--accent-soft);
+}
+
+/* ---------- 报头 masthead ---------- */
+
+.masthead {
+  border-bottom: 3px double var(--border);
+  padding: 2.2rem 1.5rem 1.4rem;
+  text-align: center;
+}
+
+.masthead__mark {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 0.85rem;
+  border-radius: 16px;
+}
+
+.masthead__name {
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.masthead__slogan {
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  margin-top: 0.5rem;
+  letter-spacing: 0.04em;
+}
+
+.masthead__nav {
+  font-family: var(--sans);
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+}
+
+.masthead__nav a {
+  margin: 0 0.6rem;
+  border-bottom: none;
+  color: var(--ink-soft);
+}
+
+.masthead__nav a:hover {
+  color: var(--accent);
+}
+
+/* ---------- 版式容器 ---------- */
+
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, var(--content-width)) 240px;
+  gap: 3rem;
+  padding: 2.5rem 0 5rem;
+  justify-content: center;
+}
+
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .toc {
+    display: none;
+  }
+}
+
+/* ---------- 文章头部 ---------- */
+
+.article-header {
+  margin-bottom: 2.2rem;
+}
+
+.article-header__meta {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.article-header h1 {
+  font-size: 2rem;
+  line-height: 1.35;
+  margin: 0.5rem 0 0.6rem;
+}
+
+.article-header__subtitle {
+  font-family: var(--sans);
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+  font-style: italic;
+}
+
+.article-header__date {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  margin-top: 0.8rem;
+}
+
+/* ---------- 精选工作 callout ---------- */
+
+.featured-works {
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent);
+  padding: 1.1rem 1.4rem;
+  margin: 2rem 0;
+  border-radius: 2px;
+}
+
+.featured-works__title {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin: 0 0 0.7rem;
+}
+
+.featured-works ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.featured-works li {
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+}
+
+.featured-works .why {
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 0.88rem;
+}
+
+/* ---------- 正文 ---------- */
+
+.article-body {
+  font-size: 1.08rem;
+  line-height: 1.9;
+}
+
+.article-body h2 {
+  font-size: 1.4rem;
+  margin-top: 2.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.article-body p {
+  margin: 1.1rem 0;
+}
+
+.article-body code {
+  font-family: var(--mono);
+  background: var(--bg-elevated);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.article-body blockquote {
+  border-left: 3px solid var(--border);
+  margin: 1.4rem 0;
+  padding: 0.2rem 1.2rem;
+  color: var(--ink-soft);
+}
+
+.article-body a {
+  font-weight: 600;
+}
+
+/* ---------- 目录 TOC ---------- */
+
+.toc {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  position: sticky;
+  top: 2.5rem;
+  align-self: start;
+  color: var(--ink-soft);
+}
+
+.toc__title {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-bottom: 0.7rem;
+}
+
+.toc ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-left: 1px solid var(--border);
+}
+
+.toc li {
+  padding: 0.3rem 0 0.3rem 0.8rem;
+}
+
+.toc a {
+  color: var(--ink-soft);
+  border-bottom: none;
+}
+
+.toc a:hover {
+  color: var(--accent);
+}
+
+/* ---------- 参考文献 / 开放问题 ---------- */
+
+.section-block {
+  margin-top: 3rem;
+}
+
+.section-block h2 {
+  font-size: 1.3rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+}
+
+.bibliography {
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  padding-left: 1.3rem;
+}
+
+.bibliography li {
+  margin-bottom: 0.5rem;
+}
+
+.open-questions ul {
+  padding-left: 1.3rem;
+}
+
+/* ---------- 归档页 ---------- */
+
+.archive-list {
+  list-style: none;
+  padding: 0;
+  max-width: var(--content-width);
+  margin: 2.5rem auto;
+}
+
+.archive-list li {
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.archive-list .week {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.archive-list a {
+  font-size: 1.15rem;
+  border-bottom: none;
+}
+
+.archive-list .subtitle {
+  display: block;
+  font-family: var(--sans);
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  margin-top: 0.2rem;
+}
+
+/* ---------- 页脚 ---------- */
+
+.site-footer {
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  padding: 2rem 1rem 3rem;
+  border-top: 1px solid var(--border);
+}

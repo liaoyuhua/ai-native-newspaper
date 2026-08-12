@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>从拆弹到拼弹：跨技能组合如何刺穿静态扫描的铠甲 · 深潜 AI 周刊</title>
+  <link rel="icon" type="image/png" href="../../favicon.png" />
+  <link rel="apple-touch-icon" href="../../logo.png" />
+  <link rel="stylesheet" href="../../style.css" />
+</head>
+<body>
+  <header class="masthead">
+    <img class="masthead__mark" src="../../logo.png" width="72" height="72" alt="" />
+    <p class="masthead__name">深潜 AI 周刊</p>
+    <p class="masthead__slogan">每周潜入一个 AI 方向的深处</p>
+    <nav class="masthead__nav">
+      <a href="../../index.html">最新一期</a>
+      <a href="../../archive.html">往期归档</a>
+    </nav>
+  </header>
+
+  
+<div class="page">
+  <div class="layout">
+    <article>
+      <div class="article-header">
+        <div class="article-header__meta">2026 年第 33 周 · 跨技能组合攻击为什么会成为 agent 技能扫描器的盲区？能否通过组合验证来防御？</div>
+        <h1>从拆弹到拼弹：跨技能组合如何刺穿静态扫描的铠甲</h1>
+        <p class="article-header__subtitle">ColluSkill 证明恶意可拆，ElasticBack 证明时间可藏，技能安全的分析单元亟待升级</p>
+        <p class="article-header__date">2026-08-12</p>
+      </div>
+
+      
+      <div class="featured-works">
+        <p class="featured-works__title">本期精选工作</p>
+        <ul>
+          
+          <li>
+            <a href="https://arxiv.org/abs/2608.09732" target="_blank" rel="noopener">ColluSkill: Adversarial Cross-Skill Composition for Evading Agent Skill Scanners</a> <span>[1]</span>
+            <div class="why">本期话题的核心论文：首次系统化提出并验证『跨技能组合盲区』，同时给出攻击框架（ColluSkill）与对应防御（ChainGuard），是 thesis 中攻防两端的直接证据来源。</div>
+          </li>
+          
+          <li>
+            <a href="https://arxiv.org/abs/2608.09577" target="_blank" rel="noopener">ElasticBack: Stealthy Conditional Backdoor in LLM-Agent Skills via Coupled Trigger–Rule Optimization</a> <span>[2]</span>
+            <div class="why">构成对『组合验证即可防御』这一朴素结论的关键反例：证明恶意语义还可以藏在单技能内部的时间条件耦合中，不改权重、不需多技能、对良性输入完全休眠，组合扫描对其天然失明。</div>
+          </li>
+          
+          <li>
+            <a href="https://arxiv.org/abs/2607.02357" target="_blank" rel="noopener">Cloak and Detonate: Scanner Evasion and Dynamic Detection of Agent Skill Malware</a> <span>[3]</span>
+            <div class="why">提供『为什么必须走向运行时行为验证』的最强实验证据：证明任何基于安装时外观的审计（无论单技能还是组合级）都可被系统性规避，同时给出行为中心防御的可行性数据，是防御方向论证的关键支柱。</div>
+          </li>
+          
+          <li>
+            <a href="https://arxiv.org/abs/2607.01136" target="_blank" rel="noopener">Skills Are Not Islands: Measuring Dependency and Risk in Agent Skill Supply Chains</a> <span>[4]</span>
+            <div class="why">为『跨技能依赖是普遍现实而非攻击者专利』提供百万级规模的实证基础：组合验证要分析的依赖图客观存在且体量巨大，这既是 ChainGuard 类方案的必要性依据，也是其可扩展性挑战的量化来源。</div>
+          </li>
+          
+          <li>
+            <a href="https://arxiv.org/abs/2606.00925" target="_blank" rel="noopener">SkillVetBench: Benchmarking Security Risk Detection and Verification in Open Agentic Skill Ecosystems</a>
+            <div class="why">为『组合盲区有多大、两阶段验证值多少』提供可核对的量化基准，其关于威胁集中于少数高权限原语和跨组件交互的发现，直接支撑防御设计的优先级判断。</div>
+          </li>
+          
+        </ul>
+      </div>
+      
+
+      <div class="article-body">
+        
+        <h2 id="section-1">静态扫描的盲区：为什么拆开看都安全，合起来却泄露数据？</h2>
+        <p>用户对Agent说“整理我的项目目录，然后生成并分享本周周报”。Agent之前安装了三个技能：A“文件整理器”，B“报告排版器”，C“团队分享助手”。A读取项目目录结构写入临时文件；B读取该临时文件，将内容格式化为Markdown报告；C将报告内容POST到外部端点，说明书写明“用于团队协作”。单个地看，A的脚本只是读文件写临时文件，B只做纯文本处理，C只是发送数据到一个协作地址。然而，当Agent按顺序调用它们时，临时文件将A的输出传递给B，B的输出传递给C，最终项目目录结构被泄漏到外部。这个链条之所以危险，是因为恶意语义并非存在于任一技能内部，而是浮现于技能间的组合关系中。现有的技能扫描器——用于在安装前对单个技能进行安全检查的工具——据报道正是以单个技能为分析单元：它们主要检查技能的指令、权限、依赖关系和代码行为[1]。这种“一次看一个”的假设隐含着一个前提：恶意行为可以被孤立地识别。但在跨技能工作流中，技能通过工件传递（前一个技能的输出作为后一个技能的输入）和上下文依赖（控制流在技能间转移）串接起来，攻击者可以将完整恶意意图分解为多个局部无害的子行为，分别包装成独立技能。三个技能各自过检，一旦安装，在特定任务上下文下自动串联，就构成了信息外泄管道。更隐蔽的是，攻击甚至不需要多个技能：条件后门技术让恶意逻辑藏在单个技能的指令中，平时休眠，只在用户说出特定触发短语时才激活[2]。无论是多技能拆解还是单技能休眠，其共通之处在于扫描器的分析单元（静态的单个技能文件）与攻击的实际执行单元（运行时的工作流行为）发生了结构性错配。这引出本周要深挖的问题：跨技能组合攻击具体如何绕过扫描？组合验证能否弥补这一盲区？要回答，先看两种代表性的攻击框架：ColluSkill展示了自动化的恶意分解与重组，ElasticBack则展示了单技能内的时间胶囊式后门。</p>
+        
+        <h2 id="section-2">ColluSkill：将恶意意图拆成「合法零件」的自动化工厂</h2>
+        <p>ColluSkill的目标是给定一条完整的恶意意图（如“窃取目录结构并外传”），自动产出一组相互依赖的子技能，每个子技能单独提交给扫描器时都能通过，但组合后实现原始攻击。这个过程分为两步：链式规划和扫描器反馈重写。链式规划阶段，ColluSkill利用大语言模型（LLM）将恶意意图分解为子载荷序列，并为每个子载荷规划它需要的上下文输入、产生的工件输出，以及与前后的执行交接机制。例如，一个目录外泄链可被分解为多个子技能，每个子技能分别完成部分操作并打包为独立技能[1]。初始技能链生成后，ColluSkill将每个子技能提交给目标扫描器，检查是否被标记为可疑。如果有子技能被标记，便进入迭代重写阶段：基于扫描器的反馈，ColluSkill对该技能进行重写，在保留整个技能链攻击语义的前提下降低其可疑度[1]。这是因为链的语义是靠工件类型和调用序列维系的，只要中间文件的格式约定和调用顺序保持不变，单一技能内部的表述和实现可以灵活变化。经过数轮重写，整个攻击链的平均攻击成功率可达到96.0%[1]，此时攻击链即可用于分发。这说明，现有扫描器几乎无法感知跨技能组合的风险。值得指出的是，ColluSkill的成功依赖于扫描器提供可操作的反馈，若扫描器只输出黑盒判定而不给出具体可疑点，重写将难以定向。但从已测试的扫描器看，这一条件通常成立。因此，ColluSkill揭示了技能安全的分析单元必须从单个技能扩展到技能链条。</p>
+        
+        <h2 id="section-3">ElasticBack：在单技能内埋下时间胶囊式后门</h2>
+        <p>如果ColluSkill展示了多技能组合的威力，ElasticBack则证明，即使不走出单技能范围，也能让现有防御失明。ElasticBack是一种条件后门攻击，它不修改模型权重，不依赖多技能，仅通过向技能文档中注入一条隐蔽规则R，并生成一个看似无害的触发短语T，即可实现“用户不说暗号则安全，一说暗号则中招”的效果。整个过程分三步。第一步，语义锚定规则注入：攻击者根据恶意负载生成一条规则R，并将R嵌入技能文档，使其在语义上锚定于技能的合法功能语境。第二步，冻结规则R后，攻击者需要找到一个触发短语T，使得当用户查询中包含T时，Agent的解释器会满足规则R并激活负载，而当查询中不包含T时，规则R保持静默。这一步通过隐形约束遗传搜索实现，该搜索在优化触发效果的同时兼顾隐蔽性，从而输出一个在正常场景下常见的触发短语。最终，植入后门的技能在良性输入下完全保持原有功能，但在用户无意间说出特定短语时，便会悄悄执行恶意负载。实验显示，ElasticBack在三种目标行为和四个Agent LLM上均达到高攻击成功率，良性误报率接近零，且清洁准确率无损，并能跨模型迁移[2]。这意味着，仅依靠代码签名或困惑度扫描等针对恶意文本的防御，无法识别这种看起来完全正常却暗藏规则-触发耦合的后门。它与ColluSkill形成互补：一个利用多技能的链式结构，一个利用单技能内的条件触发——两者共同表明，技能安全的盲区远比最初预想的要宽。</p>
+        
+        <h2 id="section-4">组合验证是必要防线，但安全边界必须重画</h2>
+        <p>为此，ColluSkill的作者同时提出了ChainGuard，一种上下文感知的技能链扫描器，它不孤立地检查候选技能，而是联合分析候选技能与Agent环境中已安装的全部技能，以识别仅在链条层级浮现的风险。相关实验显示，ChainGuard能降低攻击成功率，这提示组合感知分析是有益的。然而，残余风险仍不容忽视，且ChainGuard对单技能条件后门如ElasticBack，因从单个技能文档和依赖关系看不存在可捕获的组合交互异常，可能仍然难以检测。更广泛地，SkillCloak的研究显示，结构性混淆技术对大多数静态扫描器的绕过率超过80%，而自解压打包技术可绕过超过90%的扫描器，这些手法可能使部分组合感知方案面临挑战[3]。这意味着，无论安装时分析多么精密，恶意技能总能找到变形后复原的方法，检测的胜负手在于运行时行为。有动态分析方法（如沙箱执行与数据流追踪）展现出高检出率和低误报率的潜力，暗示运行时行为检测的重要性。对143万技能的依赖分析也初步表明，安全信号常隐匿于依赖图中，仅靠审视技能本体可能不足[4]。这些发现汇聚成一个结论：技能安全的分析单元必须从静态的“技能文件”升级为动态的“工作流行为”。单纯组合验证向前迈出了一步，但它只是三层必要防线中的第一层。一个合理的安全栈应包含：安装时的组合感知审计（如依赖分析与工件流模拟），运行时的行为证据收集（如基于信息流的分析或系统调用监控），以及将危险操作原语默认关闭、按需授权的权限模型。三层中的任何缺失，都会留给攻击者将恶意语义搬进剩余缝隙的空间。目前，如何以可接受的性能开销和经济成本在真实规模的技能生态中部署运行时探针，如何统一覆盖组合攻击与条件触发攻击的验证框架，仍是待解决的工程和学术问题。但方向已清晰：不再问“这个技能文件安全吗”，而要问“这个工作流实际做了什么”。</p>
+        
+      </div>
+
+      
+      <div class="section-block open-questions">
+        <h2>开放问题</h2>
+        <ul>
+          
+          <li>组合分析的可扩展性与残余风险：ChainGuard 将 ASR 从 96.0% 压到 22.5%，但残余约两成链仍可通过，且其输入是『候选技能 × 全部已安装技能』的联合空间——在 143 万技能、依赖簇围绕工作流密集形成的生态中（Skills Are Not Islands 的实证），联合分析的计算成本与误报控制如何随安装基数扩展，论文未给出上限分析（来源：ev_a948aa17fb2d, ev_ebdf8657b603）。</li>
+          
+          <li>条件触发与组合攻击的正交性尚未被统一建模：ElasticBack 证明单技能内的触发器-规则耦合即可绕过部署时防御，ChainGuard 类组合扫描对其天然失明；反过来，纯运行时 taint 方案（SkillDetonate）对休眠载荷需要恰好触发条件命中的探针输入——两类防御各自的覆盖缺口如何互补成一个统一验证框架，目前没有任何工作给出（来源：ev_03467c62cfe6, ev_e4da4cba918a）。</li>
+          
+          <li>运行时验证的探针覆盖与生态成本：SkillVetBench 显示 89% 的恶意技能威胁来自跨组件交互、RSA 显示运行时审计优于静态，但沙箱执行只能覆盖被探针激活的行为路径；同时 SkillVetBench 发现攻击集中于 exec/write_file/install_skill/spawn 少数高权限原语——『收窄高权限原语的默认授权』与『扩大运行时探针覆盖』哪条路线能以更低的生态摩擦获得更大风险削减，仍是开放的工程争论（来源：ev_4c563aea9279, ev_ae34d6149e7d）。</li>
+          
+        </ul>
+      </div>
+      
+
+      
+      <div class="section-block">
+        <h2>参考文献</h2>
+        <ol class="bibliography">
+          
+          <li id="ref-1"><a href="https://arxiv.org/abs/2608.09732" target="_blank" rel="noopener">ColluSkill: Adversarial Cross-Skill Composition for Evading Agent Skill Scanners</a></li>
+          
+          <li id="ref-2"><a href="https://arxiv.org/abs/2608.09577" target="_blank" rel="noopener">ElasticBack: Stealthy Conditional Backdoor in LLM-Agent Skills via Coupled Trigger–Rule Optimization</a></li>
+          
+          <li id="ref-3"><a href="https://arxiv.org/abs/2607.02357" target="_blank" rel="noopener">Cloak and Detonate: Scanner Evasion and Dynamic Detection of Agent Skill Malware</a></li>
+          
+          <li id="ref-4"><a href="https://arxiv.org/abs/2607.01136" target="_blank" rel="noopener">Skills Are Not Islands: Measuring Dependency and Risk in Agent Skill Supply Chains</a></li>
+          
+        </ol>
+      </div>
+      
+    </article>
+
+    <nav class="toc">
+      <p class="toc__title">目录</p>
+      <ol>
+        
+        <li><a href="#section-1">静态扫描的盲区：为什么拆开看都安全，合起来却泄露数据？</a></li>
+        
+        <li><a href="#section-2">ColluSkill：将恶意意图拆成「合法零件」的自动化工厂</a></li>
+        
+        <li><a href="#section-3">ElasticBack：在单技能内埋下时间胶囊式后门</a></li>
+        
+        <li><a href="#section-4">组合验证是必要防线，但安全边界必须重画</a></li>
+        
+      </ol>
+    </nav>
+  </div>
+</div>
+
+
+  <footer class="site-footer">
+    <p>深潜 AI 周刊 · 由 AI 编辑部 每周自动生成与人工审核</p>
+  </footer>
+</body>
+</html>

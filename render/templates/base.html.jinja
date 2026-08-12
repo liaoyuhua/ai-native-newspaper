@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{{ asset_prefix }}favicon.png" />
+  <link rel="apple-touch-icon" href="{{ asset_prefix }}logo.png" />
+  <link rel="stylesheet" href="{{ asset_prefix }}style.css" />
+</head>
+<body>
+  <header class="masthead">
+    <img class="masthead__mark" src="{{ asset_prefix }}logo.png" width="72" height="72" alt="" />
+    <p class="masthead__name">{{ site_name }}</p>
+    <p class="masthead__slogan">{{ site_slogan }}</p>
+    <nav class="masthead__nav">
+      <a href="{{ root_prefix }}index.html">最新一期</a>
+      <a href="{{ root_prefix }}archive.html">往期归档</a>
+    </nav>
+  </header>
+
+  {% block content %}{% endblock %}
+
+  <footer class="site-footer">
+    <p>{{ site_name }} · 由 {{ site_author }} 每周自动生成与人工审核</p>
+  </footer>
+</body>
+</html>

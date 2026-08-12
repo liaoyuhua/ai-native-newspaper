@@ -1,0 +1,66 @@
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      week_id:
+        description: "对应 data/proposals/<week_id>.json 里的 week_id，例如 2026-W32；留空则用当前自然周"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  research-write-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 深度研究 + 撰写 + 事实核查 + 渲染
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_EXTRA_KWARGS: ${{ secrets.LLM_EXTRA_KWARGS }}
+          LLM_TEMPERATURE: ${{ secrets.LLM_TEMPERATURE }}
+          LLM_CHEAP_API_KEY: ${{ secrets.LLM_CHEAP_API_KEY }}
+          LLM_CHEAP_BASE_URL: ${{ secrets.LLM_CHEAP_BASE_URL }}
+          LLM_CHEAP_MODEL: ${{ secrets.LLM_CHEAP_MODEL }}
+          LLM_MID_MODEL: ${{ secrets.LLM_MID_MODEL }}
+          LLM_MODEL_TOPIC_CLUSTERING: ${{ secrets.LLM_MODEL_TOPIC_CLUSTERING }}
+          LLM_MODEL_TOPIC_SCORING: ${{ secrets.LLM_MODEL_TOPIC_SCORING }}
+          LLM_MODEL_FACTCHECK: ${{ secrets.LLM_MODEL_FACTCHECK }}
+          LLM_MODEL_EDITORIAL: ${{ secrets.LLM_MODEL_EDITORIAL }}
+          LLM_MODEL_MECHANISM: ${{ secrets.LLM_MODEL_MECHANISM }}
+          LLM_MODEL_RESEARCH_AGENT: ${{ secrets.LLM_MODEL_RESEARCH_AGENT }}
+          LLM_MODEL_WRITING: ${{ secrets.LLM_MODEL_WRITING }}
+          MECHANISM_MIN_HIGH_CARDS: ${{ secrets.MECHANISM_MIN_HIGH_CARDS }}
+          MECHANISM_DEEP_DIVE_CARDS: ${{ secrets.MECHANISM_DEEP_DIVE_CARDS }}
+          RESEARCH_MAX_TOOL_CALLS: ${{ secrets.RESEARCH_MAX_TOOL_CALLS }}
+          FACTCHECK_MAX_REVISION_ROUNDS: ${{ secrets.FACTCHECK_MAX_REVISION_ROUNDS }}
+          ARTICLE_MAX_SECTIONS: ${{ secrets.ARTICLE_MAX_SECTIONS }}
+          ARTICLE_MIN_FINAL_SCORE: ${{ secrets.ARTICLE_MIN_FINAL_SCORE }}
+          ARTICLE_CLAIM_AUDIT_ROUNDS: ${{ secrets.ARTICLE_CLAIM_AUDIT_ROUNDS }}
+          SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
+        run: |
+          if [ -n "${{ inputs.week_id }}" ]; then
+            python main_publish.py --week-id "${{ inputs.week_id }}"
+          else
+            python main_publish.py
+          fi
+
+      - name: 提交并发布
+        run: |
+          git config user.name "ai-native-newspaper-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/ data/articles/ data/research/ data/memory/ data/runs/
+          git diff --cached --quiet || git commit -m "chore: 发布本周深度文章"
+          git push
