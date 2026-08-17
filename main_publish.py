@@ -41,7 +41,8 @@ def main() -> None:
     if proposal.get("publish_recommendation") == "skip":
         manifest.finish("skipped", reason=proposal.get("reason", "proposal_rejected"))
         manifest.write(config.RUNS_DIR / f"{week_id}-publish.json")
-        raise SystemExit("该周提案未越过选题质量门槛，拒绝进入发布流程")
+        logger.warning("该周提案未越过选题质量门槛，本次发布正常跳过")
+        return
     topic = proposal["selected_topic"]
     manifest.stage("proposal_loaded", question=topic["name"], schema_version=proposal.get("schema_version", "1.0"))
     logger.info("加载提案，话题: %s", topic["name"])

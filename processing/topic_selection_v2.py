@@ -109,6 +109,49 @@ def generate_weekly_proposal_v2(lookback_days: int = 14) -> dict:
     return proposal
 
 
+def promote_shortlist_candidate(proposal: dict, rank: int, reason: str) -> dict:
+    """把人工选定的 shortlist 候选重建为完整提案，但不绕过致命缺陷/可成文性拒绝。"""
+    shortlist = list(proposal.get("shortlist") or [])
+    if rank < 1 or rank > len(shortlist):
+        raise ValueError(f"candidate_rank 必须在 1..{len(shortlist)} 之间")
+    if not reason.strip():
+        raise ValueError("人工选择必须填写 override_reason")
+
+    items = [_raw_item_from_dict(raw) for raw in proposal.get("all_items") or []]
+    items_by_id = {item.item_id: item for item in items}
+    selected = shortlist[rank - 1]
+    candidate = _candidate_from_row(selected)
+    if not _valid_ids(candidate, items_by_id):
+        raise ValueError("候选题目关联的原始信号已缺失，无法重建提案")
+
+    if not selected.get("feasibility"):
+        probes, evidence = _probe_candidates([selected], items_by_id)
+        probe = probes.get(candidate.id)
+        selected["feasibility"] = probe.to_dict() if probe else None
+        selected["final_score"] = _final_score(selected, probe)
+    else:
+        evidence = list(selected.get("preliminary_materials") or [])
+
+    fatal = list((selected.get("editorial") or {}).get("fatal_flaws") or [])
+    probe = selected.get("feasibility") or {}
+    if fatal:
+        raise ValueError("该候选存在致命缺陷，不能人工提升: " + ", ".join(fatal))
+    if probe.get("recommendation") != "pursue":
+        raise ValueError("该候选未通过可成文性验证，不能直接发布；请换候选或补充一手资料")
+
+    rebuilt = _build_proposal(selected, shortlist, items, items_by_id)
+    rebuilt["source_health"] = proposal.get("source_health") or {}
+    rebuilt["preliminary_evidence"] = evidence
+    rebuilt["human_override"] = {
+        "candidate_rank": rank,
+        "reason": reason.strip(),
+        "previous_recommendation": proposal.get("publish_recommendation", "skip"),
+        "previous_reason": proposal.get("reason", ""),
+        "selected_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return rebuilt
+
+
 def _generate_questions(items: list[RawItem], memory: str) -> list[CandidateQuestion]:
     ranked = sorted(items, key=lambda x: (x.authority, math.log1p(max(0, x.buzz))), reverse=True)[:140]
     compact = [_item_for_prompt(x, 350) for x in ranked]
@@ -331,3 +374,17 @@ def _valid_ids(candidate: CandidateQuestion, items_by_id: dict[str, RawItem]) ->
 
 def _candidate_from_row(row: dict) -> CandidateQuestion:
     return CandidateQuestion.from_dict(row["candidate"], 0)
+
+
+def _raw_item_from_dict(raw: dict) -> RawItem:
+    return RawItem(
+        title=str(raw.get("title") or ""),
+        url=str(raw.get("url") or ""),
+        source=str(raw.get("source") or ""),
+        lang=str(raw.get("lang") or "en"),
+        authority=float(raw.get("authority") or 0.5),
+        published=raw.get("published"),
+        snippet=str(raw.get("snippet") or ""),
+        buzz=float(raw.get("buzz") or 0.0),
+        extra=raw.get("extra") or {},
+    )

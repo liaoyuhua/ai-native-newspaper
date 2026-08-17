@@ -1,0 +1,58 @@
+name: select-candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      week_id:
+        description: "提案周，例如 2026-W34"
+        required: true
+      candidate_rank:
+        description: "shortlist 名次，从 1 开始"
+        required: true
+        default: "1"
+      override_reason:
+        description: "为什么人工选择这个候选"
+        required: true
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  select-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 选择候补并重建提案
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_CHEAP_API_KEY: ${{ secrets.LLM_CHEAP_API_KEY }}
+          LLM_CHEAP_BASE_URL: ${{ secrets.LLM_CHEAP_BASE_URL }}
+          LLM_CHEAP_MODEL: ${{ secrets.LLM_CHEAP_MODEL }}
+          LLM_MID_MODEL: ${{ secrets.LLM_MID_MODEL }}
+          LLM_MODEL_TOPIC_SCORING: ${{ secrets.LLM_MODEL_TOPIC_SCORING }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: >-
+          python main_select_candidate.py
+          --week-id "${{ inputs.week_id }}"
+          --rank "${{ inputs.candidate_rank }}"
+          --reason "${{ inputs.override_reason }}"
+
+      - name: 提交人工选择
+        run: |
+          git config user.name "ai-native-newspaper-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/proposals/ data/runs/
+          git diff --cached --quiet || git commit -m "chore: 人工选择候补话题"
+          git push

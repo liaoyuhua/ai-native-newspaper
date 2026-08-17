@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import config
 from processing.editorial_models import (
@@ -18,6 +19,8 @@ from writing.contracts import align_sections, validate_concept_dependencies
 from writing.reader_review import ensure_reader_context, reader_review_passed
 from writing.outline import _enforce_outline
 from writing.quality_gate import _keyword_overlap, _register_and_find_blocking_claims
+from processing.topic_selection_v2 import promote_shortlist_candidate
+from sources.common import RawItem
 
 
 class EditorialModelsTest(unittest.TestCase):
@@ -40,6 +43,44 @@ class EditorialModelsTest(unittest.TestCase):
     def test_feasibility_defaults_missing_dimensions_to_failure(self):
         probe = FeasibilityProbe.from_dict({"scores": {"primary_sources": 5}, "recommendation": "pursue"})
         self.assertLess(probe.average, 2.0)
+
+    def test_human_selection_rebuilds_complete_proposal(self):
+        item = RawItem(title="Paper", url="https://example.test/paper", source="arxiv", authority=1.0)
+        row = {
+            "candidate": {
+                "id": "q1", "question": "候选问题？", "scope": "限定范围", "why_now": "本周有新工作",
+                "technical_delta": "改变分析单元", "reader_takeaway": "理解新边界", "lens": "systems_infra",
+                "item_ids": [item.item_id], "signal_score": 0.8,
+            },
+            "editorial": {"average": 3.4, "fatal_flaws": []},
+            "feasibility": {
+                "average": 3.6, "recommendation": "pursue", "proposed_thesis": "待验证判断",
+                "mechanism_targets": ["机制 A"], "missing_evidence": [], "scores": {},
+            },
+            "final_score": 3.456,
+            "shortlist_score": 3.4,
+        }
+        source = {"publish_recommendation": "skip", "reason": "quality_threshold_not_met",
+                  "shortlist": [row], "all_items": [item.to_dict()]}
+        with patch("processing.topic_selection_v2.match_topic_memory", return_value=None):
+            promoted = promote_shortlist_candidate(source, 1, "编辑认为该问题符合本刊方向")
+        self.assertEqual(promoted["publish_recommendation"], "pursue")
+        self.assertEqual(promoted["selected_topic"]["name"], "候选问题？")
+        self.assertEqual(promoted["human_override"]["candidate_rank"], 1)
+        self.assertEqual(promoted["candidate_works"][0]["url"], item.url)
+
+    def test_human_selection_cannot_bypass_fatal_flaw(self):
+        item = RawItem(title="Paper", url="https://example.test/bad", source="blog")
+        row = {
+            "candidate": {"id": "q1", "question": "问题？", "item_ids": [item.item_id]},
+            "editorial": {"average": 4.0, "fatal_flaws": ["single_marketing_source"]},
+            "feasibility": {"average": 4.0, "recommendation": "pursue"},
+            "final_score": 4.0,
+        }
+        with self.assertRaisesRegex(ValueError, "致命缺陷"):
+            promote_shortlist_candidate(
+                {"shortlist": [row], "all_items": [item.to_dict()]}, 1, "人工选择"
+            )
 
 
 class EvidenceStoreTest(unittest.TestCase):
