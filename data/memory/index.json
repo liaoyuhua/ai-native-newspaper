@@ -1,6 +1,25 @@
 {
   "topics": [
     {
+      "topic_id": "pretraining-alignment",
+      "display_name": "把对齐揉进预训练",
+      "aliases": [
+        "对齐前置",
+        "Synthetic Persona Pretraining",
+        "从 token zero 对齐",
+        "预训练阶段对齐",
+        "Can alignment be baked into a model from token zero via synthetic personas, and what does that change about post-training?"
+      ],
+      "one_line_summary": "对齐正从 post-training 的“事后刷漆”重构为预训练数据/时序设计问题：同一份价值观数据从第 0 个 token 注入比在预训练末尾注入强得多，post-training 的职责降级为把已存在的人格绑定到助手身份。",
+      "standing_open_questions": [
+        "规模外推：3B/500B token 的结果能否外推到百 B 级参数、数十 T token，且在更强 RLHF 型 post-training 后是否仍保持优势？",
+        "可塑性 vs 刚性：预训练阶段写死的人格，事后是否更难调整或再对齐？persona binding 是否会锁定行为，削弱后用少量 SFT 改变的能力？",
+        "机制未解：为什么同一份反思数据在 token zero 与 mid-training 效果迥异？是表示形成时序、优化动力学还是数据排序/遗忘效应？"
+      ],
+      "last_week_id": "2026-W34",
+      "coverage_count": 1
+    },
+    {
       "topic_id": "cross-skill-composition-blindspot",
       "display_name": "跨技能组合攻击与组合验证防御",
       "aliases": [
@@ -66,5 +85,5 @@
       "coverage_count": 1
     }
   ],
-  "updated_at": "2026-08-12T05:54:26Z"
+  "updated_at": "2026-08-17T23:45:40Z"
 }

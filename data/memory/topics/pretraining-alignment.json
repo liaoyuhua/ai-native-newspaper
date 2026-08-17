@@ -1,0 +1,73 @@
+{
+  "topic_id": "pretraining-alignment",
+  "display_name": "把对齐揉进预训练",
+  "aliases": [
+    "对齐前置",
+    "Synthetic Persona Pretraining",
+    "从 token zero 对齐",
+    "预训练阶段对齐",
+    "Can alignment be baked into a model from token zero via synthetic personas, and what does that change about post-training?"
+  ],
+  "coverage": [
+    {
+      "week_id": "2026-W34",
+      "article_title": "把对齐揉进黏土：为什么 post-training 只剩绑定人格",
+      "covered_angles": [
+        "把对齐从 post-training 事后矫正重构为预训练数据构成与时序（token zero vs midtrain）问题",
+        "SPP 三步法：宪法派生第一人称反思、约 10% 文档注入、标准交叉熵预训练、post-training 绑定人格",
+        "时序消融证据：同样反思数据在 token zero 注入显著优于在 pretraining 末尾（midtrain）注入，且优势随预训练预算增长",
+        "与 CAI（宪法派生的反思）和 Instruction Pre-Training（合成指令对预训练）的机制借用与区别",
+        "post-training 角色降级为 persona binding：绑定一个已经存在的助手人格，而非安装价值观",
+        "三条未解风险：规模外推、预训练人格的刚性/可调整性、早注入优势的机制未解"
+      ],
+      "key_works_covered": [
+        {
+          "title": "Synthetic Persona Pretraining: Alignment from Token Zero",
+          "url": "https://arxiv.org/abs/2608.13482",
+          "note": "本期本体：首次把助手人格作为预训练数据设计变量，用 token zero vs 训练末尾的时序消融证明对齐可从第 0 个 token 烧进去。"
+        },
+        {
+          "title": "Pretraining Language Models with Human Preferences (PHF)",
+          "url": "https://arxiv.org/abs/2302.08582",
+          "note": "直接先例：证明在预训练阶段注入对齐信号优于先学再反学习，但用的是标量奖励而非人格/宪法。"
+        },
+        {
+          "title": "Constitutional AI: Harmlessness from AI Feedback",
+          "url": "https://arxiv.org/abs/2212.08073",
+          "note": "“宪法”概念来源，但把宪法用在 post-training；SPP 的关键增量是把同一思路从 post-training 挪进 pretraining 数据。"
+        },
+        {
+          "title": "Instruction Pre-Training: Language Models are Supervised Multitask Learners",
+          "url": "https://arxiv.org/abs/2406.14491",
+          "note": "合成监督数据混入预训练的直接工程先例，针对任务泛化而非价值观，衬托出 SPP 的增量是注入人格。"
+        }
+      ],
+      "open_questions": [
+        "规模外推：3B/500B token 的结果能否外推到百 B 级参数、数十 T token，且在更强 RLHF 型 post-training 后是否仍保持优势？",
+        "可塑性 vs 刚性：预训练阶段写死的人格，事后是否更难调整或再对齐？persona binding 是否会锁定行为，削弱后用少量 SFT 改变的能力？",
+        "机制未解：为什么同一份反思数据在 token zero 与 mid-training 效果迥异？是表示形成时序、优化动力学还是数据排序/遗忘效应？"
+      ],
+      "follow_up_signals": [
+        "出现 >10B 参数或 >5T token 规模的预训练对齐实验，验证 SPP 时序优势能否外推",
+        "有论文将“token zero 对齐 + 强 RLHF”与“传统预训练 + 前沿 RLHF”正面比武",
+        "有人给出早注入优势的机制解释（表示形成/优化动力学/数据排序等）",
+        "出现“预训练人格难以再对齐/调整”或“成功解绑/重绑定”的实证，回答刚性权衡",
+        "有团队开源 SPP 风格预训练数据配方或模型，使该路线可复现"
+      ],
+      "avoid_repeating": [
+        "不要再从头解释 SPP 三步法（宪法反思、10% 注入、post-training binding）",
+        "不要重复铺垫“对齐是刷漆”/“尾款”的比喻",
+        "不要重复 CAI 和 Instruction Pre-Training 的基本流程",
+        "不要重复 PHF 的“条件训练优于反学习”结论",
+        "不要重复 3B/500B token 的具体数字作为核心证据，除非是新的外推数据"
+      ]
+    }
+  ],
+  "one_line_summary": "对齐正从 post-training 的“事后刷漆”重构为预训练数据/时序设计问题：同一份价值观数据从第 0 个 token 注入比在预训练末尾注入强得多，post-training 的职责降级为把已存在的人格绑定到助手身份。",
+  "standing_open_questions": [
+    "规模外推：3B/500B token 的结果能否外推到百 B 级参数、数十 T token，且在更强 RLHF 型 post-training 后是否仍保持优势？",
+    "可塑性 vs 刚性：预训练阶段写死的人格，事后是否更难调整或再对齐？persona binding 是否会锁定行为，削弱后用少量 SFT 改变的能力？",
+    "机制未解：为什么同一份反思数据在 token zero 与 mid-training 效果迥异？是表示形成时序、优化动力学还是数据排序/遗忘效应？"
+  ],
+  "updated_at": "2026-08-17T23:45:40Z"
+}
