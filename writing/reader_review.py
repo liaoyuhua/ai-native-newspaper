@@ -29,16 +29,27 @@ READER_REVIEW_PROMPT = """\
 5. 新工作改变了哪一步，因此为何值得讨论。
 
 再检查核心专业词是否在首次承担推理作用之前，用日常语言解释。不要因为文风流畅就判通过。
+
+术语必须按“是否阻碍理解中心论证”分级，而不是要求术语零遗漏：
+- blocking：不知道它就无法复述系统、旧方法、新变化或核心机制。例如本文方法名、关键对象和关键操作。
+- non_blocking：实现细节、常见缩写或数学名词，即使不熟悉也不妨碍读者复述中心论证。
+  缩写可建议首次展开；非关键数学术语优先改写成它在本文中的作用，但它们不能单独阻止发布。
+- 一个术语只有在确实导致某项 checks=false 或留下关键 unanswered_question 时，才能列为 blocking。
+
 只返回 JSON：
 {"checks":{"can_identify_system":false,"can_define_core_objects":false,
 "can_explain_normal_workflow":false,"can_explain_old_approach":false,
-"can_explain_new_failure":false},"undefined_terms":[],"unanswered_questions":[],
-"repair_instructions":"只说明需要在背景节补什么、插在哪里；不要要求扩写机制", "background_pass":false}
+"can_explain_new_failure":false},
+"blocking_gaps":[{"concept":"...","reason":"为什么它阻断核心理解"}],
+"nonblocking_terms":[{"term":"...","recommended_action":"expand|rephrase|remove|leave"}],
+"unanswered_questions":[],
+"repair_instructions":"只修复 blocking_gaps；不要为 nonblocking_terms 扩写背景", "background_pass":false}
 """
 
 REPAIR_PROMPT = """\
 你是技术文章作者。只修改下面的背景小节，补齐冷启动读者指出的理解缺口。
 - 保留原有论点、引用标记和已支持的事实；不得发明论文结论、数字或 evidence_id。
+- 只修复 blocking_gaps；不要为了 nonblocking_terms 增加科普段落。
 - 新增内容只解释核心对象、正常工作流、旧方法、隐藏假设与新失败。
 - 用自然散文，不写术语表、FAQ 或字段清单；控制新增内容在 400 汉字以内。
 - 直接返回修改后的完整 Markdown 小节，不要解释。
@@ -85,11 +96,18 @@ def reader_review_passed(review: dict) -> bool:
         "can_identify_system", "can_define_core_objects", "can_explain_normal_workflow",
         "can_explain_old_approach", "can_explain_new_failure",
     )
-    return (
-        review.get("background_pass") is True
-        and all(checks.get(key) is True for key in required)
-        and not [x for x in review.get("undefined_terms", []) if str(x).strip()]
-    )
+    checks_pass = all(checks.get(key) is True for key in required)
+    if "blocking_gaps" in review:
+        blocking = [x for x in review.get("blocking_gaps", []) if x]
+    else:
+        # 兼容旧审稿结果：若所有理解检查已通过且没有遗留问题，
+        # 单独的 undefined_terms 视为非阻断术语，而不是发布失败。
+        blocking = [] if checks_pass and not review.get("unanswered_questions") else list(
+            review.get("undefined_terms", []) or []
+        )
+    return checks_pass and not blocking and not [
+        x for x in review.get("unanswered_questions", []) if str(x).strip()
+    ]
 
 
 def repair_context_for_reader(context_text: str, review: dict, reader_context: dict) -> str:

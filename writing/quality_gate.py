@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import config
 from processing.llm_client import chat_json, chat_text
 from research.evidence import EvidenceStore
+from writing.reader_review import reader_review_passed
 
 MARKER_RE = re.compile(r"【EV:([^】]+)】")
 FINAL_SCORE_DIMENSIONS = (
@@ -91,7 +92,7 @@ def run_article_quality_gate(
     evidence_store: EvidenceStore,
     reader_review: dict | None = None,
 ) -> QualityGateResult:
-    if not reader_review or reader_review.get("background_pass") is not True:
+    if not reader_review or not reader_review_passed(reader_review):
         raise ArticleQualityError("reader_background_not_proven", {"reader_review": reader_review or {}})
     body = "\n\n".join(f"## {s.get('heading', '')}\n{s.get('text', '')}" for s in sections)
     audit_rounds = []

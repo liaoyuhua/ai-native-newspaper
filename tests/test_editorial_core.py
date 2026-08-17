@@ -172,9 +172,44 @@ class FullDraftContractTest(unittest.TestCase):
                 "can_explain_old_approach": True,
                 "can_explain_new_failure": True,
             },
-            "undefined_terms": ["Agent Skill"],
+            "blocking_gaps": [{"concept": "Agent Skill", "reason": "无法识别攻击载体"}],
+            "nonblocking_terms": [],
         }
         self.assertFalse(reader_review_passed(review))
+
+    def test_nonblocking_implementation_terms_do_not_block_publication(self):
+        review = {
+            "background_pass": False,
+            "checks": {
+                "can_identify_system": True,
+                "can_define_core_objects": True,
+                "can_explain_normal_workflow": True,
+                "can_explain_old_approach": True,
+                "can_explain_new_failure": True,
+            },
+            "blocking_gaps": [],
+            "nonblocking_terms": [
+                {"term": "SFT", "recommended_action": "expand"},
+                {"term": "交叉熵", "recommended_action": "rephrase"},
+            ],
+            "unanswered_questions": [],
+        }
+        self.assertTrue(reader_review_passed(review))
+
+    def test_legacy_review_allows_minor_terms_when_core_understanding_passes(self):
+        review = {
+            "background_pass": False,
+            "checks": {
+                "can_identify_system": True,
+                "can_define_core_objects": True,
+                "can_explain_normal_workflow": True,
+                "can_explain_old_approach": True,
+                "can_explain_new_failure": True,
+            },
+            "undefined_terms": ["SFT", "交叉熵"],
+            "unanswered_questions": [],
+        }
+        self.assertTrue(reader_review_passed(review))
 
     def test_existing_reader_context_does_not_call_model(self):
         context = {"prerequisites": [{"concept": "技能"}], "causal_bridge": ["A", "B"]}
