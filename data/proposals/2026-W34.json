@@ -1,7 +1,74 @@
 {
   "schema_version": "2.0",
-  "publish_recommendation": "skip",
-  "reason": "quality_threshold_not_met",
+  "publish_recommendation": "pursue",
+  "selected_topic": {
+    "name": "Can alignment be baked into a model from token zero via synthetic personas, and what does that change about post-training?",
+    "description": "Compare Synthetic Persona Pretraining with standard pretrain-then-align, looking at evidence on behavior and drift; no full alignment survey.",
+    "lens": "models_algorithms",
+    "score": 3.813,
+    "why_now": "Paper 2608.13482 proposes interleaving persona-driven synthetic documents into pretraining so assistant identity is foundational rather than a final overlay.",
+    "technical_delta": "Replaces late-stage SFT/RLHF identity imposition with curated pretraining data that teaches cooperative, persona-consistent behavior from the start, potentially reducing reward hacking and post-training costs.",
+    "reader_takeaway": "Assess whether alignment-from-scratch is a viable alternative to current post-training pipelines, and what risks it shifts into data curation.",
+    "memory_relation": "new",
+    "related_topic_id": "",
+    "score_breakdown": {
+      "editorial": {
+        "scores": {
+          "importance": 4.0,
+          "timeliness": 4.0,
+          "technical_delta": 4.0,
+          "reader_payoff": 3.0,
+          "attractiveness": 4.0,
+          "independent_confirmation": 2.0,
+          "non_redundancy": 3.0
+        },
+        "average": 3.429,
+        "fatal_flaws": []
+      },
+      "feasibility": {
+        "scores": {
+          "primary_sources": 4.0,
+          "mechanism_clarity": 5.0,
+          "comparison_value": 5.0,
+          "thesis_potential": 5.0,
+          "weekly_scope_fit": 5.0
+        },
+        "proposed_thesis": "Synthetic Persona Pretraining (SPP) demonstrates that embedding a value-aligned assistant persona into pretraining data from token zero produces more robust constitution following and lower misalignment than late-stage persona injection or standard post-hoc alignment, indicating alignment can be foundational but depends on early intervention and subsequent persona binding.",
+        "mechanism_targets": [
+          "First-person value reflections derived from a normative constitution injected into pretraining documents",
+          "Persona binding through post-training on user–assistant dialogue to associate the pretrained persona with assistant identity"
+        ],
+        "missing_evidence": [
+          "Full experimental details: model architectures, pretraining data composition, annotation guidelines, constitution sources, and exact post-training procedure",
+          "Quantitative results for capability preservation, benchmark comparisons against standard SFT/RLHF baselines, and statistical significance / variance",
+          "Analysis of risks shifted to data curation, potential biases in synthetic reflections, and whether benefits transfer beyond 3B/500B tokens"
+        ],
+        "recommendation": "pursue",
+        "average": 4.8
+      },
+      "signal_score": 0.4529
+    }
+  },
+  "rationale": "Paper 2608.13482 proposes interleaving persona-driven synthetic documents into pretraining so assistant identity is foundational rather than a final overlay.",
+  "proposed_thesis": "Synthetic Persona Pretraining (SPP) demonstrates that embedding a value-aligned assistant persona into pretraining data from token zero produces more robust constitution following and lower misalignment than late-stage persona injection or standard post-hoc alignment, indicating alignment can be foundational but depends on early intervention and subsequent persona binding.",
+  "research_focus": [
+    "First-person value reflections derived from a normative constitution injected into pretraining documents",
+    "Persona binding through post-training on user–assistant dialogue to associate the pretrained persona with assistant identity"
+  ],
+  "missing_evidence": [
+    "Full experimental details: model architectures, pretraining data composition, annotation guidelines, constitution sources, and exact post-training procedure",
+    "Quantitative results for capability preservation, benchmark comparisons against standard SFT/RLHF baselines, and statistical significance / variance",
+    "Analysis of risks shifted to data curation, potential biases in synthetic reflections, and whether benefits transfer beyond 3B/500B tokens"
+  ],
+  "candidate_works": [
+    {
+      "item_id": "901b8f981b0a",
+      "title": "Synthetic Persona Pretraining: Alignment from Token Zero",
+      "url": "https://arxiv.org/abs/2608.13482v1",
+      "why": "用于核实：Replaces late-stage SFT/RLHF identity imposition with curated pretraining data that teaches cooperative, persona-consistent behavior from the start, potentially reducing reward hacking and post-training costs.",
+      "source": "arXiv/cs.CL"
+    }
+  ],
   "shortlist": [
     {
       "candidate": {
@@ -487,8 +554,59 @@
         "fatal_flaws": []
       },
       "shortlist_score": 3.313,
-      "feasibility": null,
-      "final_score": 0.0
+      "feasibility": {
+        "scores": {
+          "primary_sources": 4.0,
+          "mechanism_clarity": 5.0,
+          "comparison_value": 5.0,
+          "thesis_potential": 5.0,
+          "weekly_scope_fit": 5.0
+        },
+        "proposed_thesis": "Synthetic Persona Pretraining (SPP) demonstrates that embedding a value-aligned assistant persona into pretraining data from token zero produces more robust constitution following and lower misalignment than late-stage persona injection or standard post-hoc alignment, indicating alignment can be foundational but depends on early intervention and subsequent persona binding.",
+        "mechanism_targets": [
+          "First-person value reflections derived from a normative constitution injected into pretraining documents",
+          "Persona binding through post-training on user–assistant dialogue to associate the pretrained persona with assistant identity"
+        ],
+        "missing_evidence": [
+          "Full experimental details: model architectures, pretraining data composition, annotation guidelines, constitution sources, and exact post-training procedure",
+          "Quantitative results for capability preservation, benchmark comparisons against standard SFT/RLHF baselines, and statistical significance / variance",
+          "Analysis of risks shifted to data curation, potential biases in synthetic reflections, and whether benefits transfer beyond 3B/500B tokens"
+        ],
+        "recommendation": "pursue",
+        "average": 4.8
+      },
+      "final_score": 3.813,
+      "preliminary_materials": [
+        {
+          "evidence_id": "ev_90fd2c34e7cf",
+          "title": "Synthetic Persona Pretraining: Alignment from Token Zero",
+          "url": "https://arxiv.org/abs/2608.13482",
+          "source_type": "arxiv_fulltext",
+          "excerpt": "Synthetic Persona Pretraining: Alignment from Token Zero Julian Minder Viktor Moskvoretskii Raghav Singhal Affiliation: EPFL Difan Jiao Andy Arditi Shaobo Cui Yiderigun Borjigin Affiliation: University of Toronto Affiliation: Northeastern University Affiliation: SJTU Affiliation: Saarland University Kartik Bali Stefan Krsteski Harsh Raj Huu Nguyen Affiliation: EPFL Affiliation: Northeastern University Affiliation: Hereon Affiliation: TUHH Affiliation: Ontocord AI Jannik Brinkmann Ashton Anderson Roland Aydin Robert West Affiliation: EPFL Affiliation: University of Toronto Affiliation: Northeastern University Affiliation: Saarland University Affiliation: TUC Affiliation: DFKI modelraising.ai/spp Models and Data Code Abstract As language-model-based AI is increasingly deployed in autonomous settings, aligning its goals and values with those of humans becomes critical. Today, alignment, and the assistant identity itself, are typically introduced only after pretraining, once behavioral priors are already established. This can make values a thin overlay, rather than deeply rooted, and facilitate subsequent misalignment. Pursuing a different paradigm, we introduce Synthetic Persona Pretraining (SPP) , which installs the desired assistant persona from token zero in pretraining. First, we annotate pretraining documents with value-aligned first-person reflections derived from a normative value constitution. Second, we pretrain via the standard cross-entropy loss on standard pretraining documents as well as their reflections, which installs the desired persona among a multitude of other personas. Finally, we post-train on user–assistant dialogue data, which binds this desired persona to the assistant identity, a process we call persona binding . By pretraining models up to 3 3 B parameters on 500 500 B tokens, we show that SPP improves constitution following and jailbreak robustness, and reduces the misalignment rate in out-of-distribution moral dilemmas, while preserving capabilities. Early intervention matters: compared with alignment from token zero, introducing SPP only at the end of pretraining yields weaker constitution adherence, does not shift value priorities, and leads to less aligned choices in dilemmas. This advantage depends on persona binding and, importantly, increases with pretraining budget. Overall, our results show that shaping values early is critical for alignment and establish pretraining-time persona interventions as an effective approach to do so. Figure 1: Synthetic Persona Pretraining (SPP). 1 We annotate pretraining documents ( ≈ 10 % \\approx 10\\% ) with constitution-based, first-person value reflections to directly install the desired assistant behavior (“ [ … ] [\\dots] ” refers to constitution articles). 2 We train data-matched 3 3 B models on 500 500 B tokens, injecting the annotated set at different stages of pretraining ( SPP {T0} , SPP {MT} , SPP {T0,MT} ) or not at all (Vanilla, Filtered); all variants receive identical po"
+        }
+      ]
+    }
+  ],
+  "runner_up_topics": [
+    {
+      "name": "How does Claude's text watermark work, and what attacks can realistically defeat it?",
+      "score": 3.794,
+      "lens": "models_algorithms"
+    },
+    {
+      "name": "Can a frozen LLM abstain from answering in a single forward pass without a separate classifier or retraining?",
+      "score": 3.747,
+      "lens": "models_algorithms"
+    },
+    {
+      "name": "Does framing KV cache quantization as transform coding unlock lower memory with less accuracy loss than uniform quantization?",
+      "score": 3.747,
+      "lens": "systems_infra"
+    },
+    {
+      "name": "How can deployed safety classifiers be monitored and adapted without retraining when traffic shifts?",
+      "score": 0.0,
+      "lens": "models_algorithms"
     }
   ],
   "all_items": [
@@ -7333,6 +7451,9 @@
       }
     }
   ],
+  "raw_topic_member_ids": [
+    "901b8f981b0a"
+  ],
   "source_health": {
     "generated_at": "2026-08-17T02:06:54.705210+00:00",
     "counts": {
@@ -7454,5 +7575,25 @@
         "last_error": ""
       }
     }
+  },
+  "preliminary_evidence": [
+    {
+      "id": "ev_90fd2c34e7cf",
+      "document_id": "doc_3f371e30e46e",
+      "title": "Synthetic Persona Pretraining: Alignment from Token Zero",
+      "url": "https://arxiv.org/abs/2608.13482",
+      "source_type": "arxiv_fulltext",
+      "excerpt": "Synthetic Persona Pretraining: Alignment from Token Zero Julian Minder Viktor Moskvoretskii Raghav Singhal Affiliation: EPFL Difan Jiao Andy Arditi Shaobo Cui Yiderigun Borjigin Affiliation: University of Toronto Affiliation: Northeastern University Affiliation: SJTU Affiliation: Saarland University Kartik Bali Stefan Krsteski Harsh Raj Huu Nguyen Affiliation: EPFL Affiliation: Northeastern University Affiliation: Hereon Affiliation: TUHH Affiliation: Ontocord AI Jannik Brinkmann Ashton Anderson Roland Aydin Robert West Affiliation: EPFL Affiliation: University of Toronto Affiliation: Northeastern University Affiliation: Saarland University Affiliation: TUC Affiliation: DFKI modelraising.ai/spp Models and Data Code Abstract As language-model-based AI is increasingly deployed in autonomous settings, aligning its goals and values with those of humans becomes critical. Today, alignment, and the assistant identity itself, are typically introduced only after pretraining, once behavioral priors are already established. This can make values a thin overlay, rather than deeply rooted, and facilitate subsequent misalignment. Pursuing a different paradigm, we introduce Synthetic Persona Pretraining (SPP) , which installs the desired assistant persona from token zero in pretraining. First, we annotate pretraining documents with value-aligned first-person reflections derived from a normative value constitution. Second, we pretrain via the standard cross-entropy loss on standard pretraining documents as well as their reflections, which installs the desired persona among a multitude of other personas. Finally, we post-train on user–assistant dialogue data, which binds this desired persona to the assistant identity, a process we call persona binding . By pretraining models up to 3 3 B parameters on 500 500 B tokens, we show that SPP improves constitution following and jailbreak robustness, and reduces the misalignment rate in out-of-distribution moral dilemmas, while preserving capabilities. Early intervention matters: compared with alignment from token zero, introducing SPP only at the end of pretraining yields weaker constitution adherence, does not shift value priorities, and leads to less aligned choices in dilemmas. This advantage depends on persona binding and, importantly, increases with pretraining budget. Overall, our results show that shaping values early is critical for alignment and establish pretraining-time persona interventions as an effective approach to do so. Figure 1: Synthetic Persona Pretraining (SPP). 1 We annotate pretraining documents ( ≈ 10 % \\approx 10\\% ) with constitution-based, first-person value reflections to directly install the desired assistant behavior (“ [ … ] [\\dots] ” refers to constitution articles). 2 We train data-matched 3 3 B models on 500 500 B tokens, injecting the annotated set at different stages of pretraining ( SPP {T0} , SPP {MT} , SPP {T0,MT} ) or not at all (Vanilla, Filtered); all variants receive identical post-training. 3 SPP interventions from token zero ( SPP {T0,MT} , SPP {T0} ) perform best on constitution following and AI risk moral dilemmas. All SPP variants outperform baselines on jailbreak robustness. Early injection matters: introducing the same reflections only during midtraining ( SPP {MT} ) results in weaker constitution following and does not improve AI risk performance, whereas token zero models generalize to these dilemmas. 1 Introduction Language models acquire most of their knowledge, capabilities, and representations during pretraining, which accounts for the vast majority of the data they see, whereas the assistant identity and its values are typically introduced only later, during post-training ( Ouyang et al. 2022 ; Bai et al. 2022 ; Guan et al. 2024 ) . The resulting assistant is thus not optimally designed for its role; it is the nearest available interpolation of voices that happened to appear in the pretraining corpus, lightly anchored by post-training. This late intervention can be fragile: subsequent fine-tuning and reinforcement learning (RL) can erode aligned behavior ( Qi et al. 2024 ; He et al. 2024 ; Betley et al. 2025 ; MacDiarmid et al. 2025 ; Ji et al. 2025 ) , and jailbreaks remain effective against frontier models ( AI Security Institute 2025 ; Zou et al. 2025 ; Hagendorff et al. 2026 ) . This fragility may reflect a more fundamental property: model training appears to be path-dependent, such that information introduced early in training can have persistent effects on model behavior ( Achille et al. 2019 ; Chang et al. 2024 ; Feng et al. 2026 ; Baek et al. 2026 ; Sam et al. 2026 ; Moskvoretskii et al. 2026 ) . Importantly, pretraining covers a far broader range of contexts than post-training, providing exposure to the entire data mixture and creating more opportunities to align behavior across diverse situations. This broad coverage might be essential for robust generalization of aligned behavior. These factors motivate introducing alignment in pretraining: values installed from the start may persist more strongly than those added at the end. The vision of Model Raising ( Aydin et al. 2026 ) proposes to introduce and shape the assistant from the beginning of training. Existing approaches modify the pretraining corpus by removing, rewriting, or tagging harmful data ( O’Brien et al. 2026 ; Chen et al. 2025b ; Rathi and Radford 2026 ; Maini et al. 2025 ; Korbak et al. 2023 ) , or by adding aligned discourse and specifications ( Tice et al. 2026 ; Li et al. 2026a ; Li et al. 2026b ; Kutasov et al. 2026 ) . Although these interventions shape the model’s priors early on, the desired assistant behavior itself is never explicitly demonstrated in pretraining. Instead, it is still assembled only during post-training, as in the standard pipeline. The Persona Selection Model (PSM; Marks et al. 2026 ) posits that during pretraining, the model learns to simulate a wide repertoire of personas from its corpus, each with distinct traits, values, and behaviors ( janus 2022 ; Chen et al. 2025a ; Wang et al. 2025 ) . Under this view, post-training does not create the assistant from scratch, but wires it up as a mix of already-learned personas. The post-trained assistant inherits persona traits learned during pretraining and is thus constrained by these personas ( Lu et al. 2026 ; Tice et al. 2026 ) . Building on this view, we introduce Synthetic Persona Pretraining (SPP), a data intervention that implants the desired persona directly in pretraining: alignment from token zero . SPP consists of the following steps (also see Figure 1 ): First, we annotate a substantial share ( ≈ 10 % \\approx 10\\% ) of pretraining documents with value-aligned first-person reflections derived from a normative value constitution. Second, we pretrain with the standard cross-entropy loss on both the original documents and these reflections, which installs the desired persona among a multitude of other personas. Finally, we post-train on user–assistant dialogues, binding the desired persona to the assistant identity through a process we call persona binding . The central idea is that grounding the assistant in an aligned persona developed throughout pretraining should be simpler and more robust than constructing that persona from scratch only during post-training. Using data-matched recipes with identical post-training, we isolate the effect of introducing SPP at different stages and compare against baselines on three alignment axes: constitution following, behavior on moral dilemmas, and jailbreak robustness. Our main findings are: (i) SPP improves alignment: SPP models are better aligned than the baselines across all axes, while generally preserving capabilities and avoiding over-refusal. (ii) SPP from token zero deepens value alignment: Models aligned from token zero follow the constitution more faithfully than those that receive the intervention late in pretraining (midtraining). The token zero models generalize beyond the constitution’s explicit statements and internalize its underlying principles, leading to different value prioritization and better aligned actions in out-of-distribution (OOD) moral dilemmas. (iii) Token zero advantages grow with pretraining budget: Gains of token zero interventions over midtraining increase as we scale from a 1.7 1.7 B model trained on 100 100 B tokens to 3 3 B on 500 500 B tokens, particularly on harder and more OOD evaluations. (iv) Midtraining is sufficient for jailbreak robustness: While all SPP variants outperform baselines, midtraining alone matches or exceeds token zero jailbreak robustness. (v) SPP gains depend on persona binding: Post-training must connect the assistant to the persona installed during pretraining. When the post-training distribution does not match this persona, binding fails and alignment benefits shrink. Together, these results suggest that it is difficult to add deep values to an already-pretrained model; the model should be raised with them, from token zero. We publicly release all code, data, and trained models (along with pretraining checkpoints) to support further research. 2 Synthetic Persona Pretraining 2.1 Background: What Is a Persona? The term persona is frequently used in language model research ( Chen et al. 2025a ; Wang et al. 2025 ) , yet its meaning stays vague. We refer to a persona through the data-generating process: intuitively, a persona is the set of latent characteristics that persist across documents from one speaker, such as traits, values, and style. A persona does not require identical behavior in every situation, but it does require consistent values. Someone may write formally at work and casually with friends while maintaining a single persona: what remains consistent is how their behavior responds to specific situations, such that persona and situation together predict behavior. Since personas are consistent, inferring them can make a speaker’s text easier to predict. It has thus been hypothesized that pretraining teaches models to simulate personas in the corpus ( janus 2022 ; Marks et al. 2026 ; Chalmers 2025 ) . In this view, post-training then shapes an assistant persona from fragments of many speakers’ personas, rather than inheriting it from any single speaker ( Marks et al. 2026 ; Lu et al. 2026 ) . Its values are therefore not selected from scratch at post-training time but inherited from whatever those fragments contain. This might be problematic for alignment if it turns the assistant into a patchwork of existing behaviors and may value things we never intended. 2.2 Methodology Our goal is to move the assistant from a random mix of inherited pretraining personas to a single well-defined one, so that its values are clear, transparent, and controllable. In our vision, pretraining teaches the model to simulate this desired persona, whereas binding it to the assistant happens later, in post-training, which must attach the assistant to this persona rather than compile a new one. We term this phenomenon persona binding ( Section 3.4 ). Creating a synthetic persona in pretraining. In our setup, a constitution specifies the persona’s normative guidelines. A generator conditioned on this constitution writes short first-person reflections in which the synthetic persona reflects on a given pretraining document. We insert these reflections into pretraining documents, each preceded by a special <assistant> token to mark the change of persona, so the persona recurs throughout pretraining alongside ordinary text (examples in Figure 1 , 1 ). During training, we maximize the likelihood of both the original document tokens and the reflection tokens, excluding only the <assistant> token from the loss. Each annotated document thus teaches two things at once: the document itself shows what the world is like; the reflection, what the assistant values. In distributional terms, we initiate the assistant’s distribution with a synthetic distribution of moral r",
+      "meta": {
+        "arxiv_id": "2608.13482"
+      }
+    }
+  ],
+  "human_override": {
+    "candidate_rank": 5,
+    "reason": "比较新颖",
+    "previous_recommendation": "skip",
+    "previous_reason": "quality_threshold_not_met",
+    "selected_at": "2026-08-17T16:52:41.279457+00:00"
   }
 }
