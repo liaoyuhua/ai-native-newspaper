@@ -25,9 +25,22 @@ FULL_DRAFT_PROMPT = """\
 8. 全文约 3000–5000 汉字；以完整解释为准，不灌水。
 9. 默认读者有软件或 AI 基础，但没关注过该细分方向。context 在进入论文机制前必须用自然散文补齐
    参与者、正常工作流、既有防御或旧方法、其隐藏假设和新失败；不要写成术语表。
+10. method_role=primary_subject 是本文主角。机制正文至少一半用于它，并覆盖输入、数据/状态构造、
+    ≥3 步控制流、训练目标或接口变化、关键实验结果与局限。background 卡只能帮助解释主角。
+11. 标题、subtitle、章节标题合计最多使用一个贯穿比喻；技术结论优先直说。
 
 只返回 JSON：{"sections":[{"heading":"必须与大纲对应","role":"context|mechanism|close",
 "card_index":null,"text":"Markdown 正文"}]}
+"""
+
+DRAFT_DEPTH_REPAIR_PROMPT = """\
+你是技术文章的深度编辑。初稿没有达到机制覆盖契约，请重写整篇，但只扩展已有证据支持的内容。
+- 保留大纲节数、role、card_index 和所有有效【EV:evidence_id】。
+- 优先补足 method_role=primary_subject：输入、数据/状态构造、至少3步控制流、目标/接口变化、实验结果与局限。
+- background 方法只保留解释主角所需的最少内容。
+- 不新增材料中没有的事实、数字或因果结论；信息不足时明确写出证据边界，不要灌水。
+- 全文达到配置中的最低深度，机制内容至少占 45%，主角机制节至少 650 汉字。
+只返回 JSON：{"sections":[{"heading":"...","role":"context|mechanism|close","card_index":null,"text":"..."}]}
 """
 
 
@@ -63,18 +76,59 @@ def generate_full_draft(
         "core_intuition": dossier.get("core_intuition", ""),
         "running_example": dossier.get("running_example", ""),
         "narrative_angle": dossier.get("narrative_angle", ""),
+        "primary_work_title": dossier.get("primary_work_title", ""),
         "outline": outline.get("sections", []),
         "open_questions": (dossier.get("open_questions") or [])[:3],
     }
+    prompt_body = (
+        "Story brief:\n" + json.dumps(brief, ensure_ascii=False, indent=2)
+        + "\n\n机制卡：\n" + format_cards_for_prompt(dossier.get("high_mechanism_cards") or [])
+        + "\n\n证据片段：\n" + json.dumps(evidence, ensure_ascii=False)
+    )
     result, model_used = chat_json_with_fallback(
         model=config.MODEL_WRITING,
         fallback_model=config.MODEL_WRITING_FALLBACK,
         system_prompt=FULL_DRAFT_PROMPT,
-        user_prompt=(
-            "Story brief:\n" + json.dumps(brief, ensure_ascii=False, indent=2)
-            + "\n\n机制卡：\n" + format_cards_for_prompt(dossier.get("high_mechanism_cards") or [])
-            + "\n\n证据片段：\n" + json.dumps(evidence, ensure_ascii=False)
-        ),
+        user_prompt=prompt_body,
         temperature=0.4,
     )
-    return align_sections(result.get("sections", []), outline.get("sections", [])), model_used
+    sections = align_sections(result.get("sections", []), outline.get("sections", []))
+    depth_issues = _draft_depth_issues(sections, outline.get("sections", []))
+    if depth_issues:
+        repaired, repair_model = chat_json_with_fallback(
+            model=config.MODEL_WRITING,
+            fallback_model=config.MODEL_WRITING_FALLBACK,
+            system_prompt=DRAFT_DEPTH_REPAIR_PROMPT,
+            user_prompt=(
+                "未通过项：\n- " + "\n- ".join(depth_issues)
+                + "\n\n原始初稿：\n" + json.dumps({"sections": sections}, ensure_ascii=False)
+                + "\n\n" + prompt_body
+            ),
+            temperature=0.3,
+        )
+        sections = align_sections(repaired.get("sections", []), outline.get("sections", []))
+        model_used = repair_model
+    return sections, model_used
+
+
+def _draft_depth_issues(sections: list[dict], outline_sections: list[dict]) -> list[str]:
+    roles = {
+        (s.get("role"), s.get("card_index")): s.get("method_role")
+        for s in outline_sections
+    }
+    counts = [len("".join(str(s.get("text") or "").split())) for s in sections]
+    total = sum(counts)
+    mechanism = sum(n for n, s in zip(counts, sections) if s.get("role") == "mechanism")
+    primary = sum(
+        n for n, s in zip(counts, sections)
+        if s.get("role") == "mechanism"
+        and roles.get((s.get("role"), s.get("card_index"))) == "primary_subject"
+    )
+    issues = []
+    if total < config.ARTICLE_MIN_BODY_CHARS:
+        issues.append(f"正文 {total} 字，低于 {config.ARTICLE_MIN_BODY_CHARS}")
+    if not total or mechanism / total < config.ARTICLE_MIN_MECHANISM_RATIO:
+        issues.append("机制内容占比不足")
+    if primary < config.ARTICLE_MIN_PRIMARY_MECHANISM_CHARS:
+        issues.append(f"主角机制 {primary} 字，低于 {config.ARTICLE_MIN_PRIMARY_MECHANISM_CHARS}")
+    return issues

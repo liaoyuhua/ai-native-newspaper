@@ -53,6 +53,7 @@ fetch_fulltext、web_search。请像真正做研究一样自主使用它们：
   },
   "core_intuition": "全文核心直觉：一个类比或心智模型 + 为什么成立（2-4句）。读者读完应能用自己的话讲出『所以问题该这样切』",
   "running_example": "贯穿全文的同一个具体场景（ vignette ）。后面每个关键工作都要用它说明差异，不要换场景",
+  "primary_work_title": "本期文章真正要解释的主角论文/系统标题；必须来自 key_works，不能填背景或祖先工作",
   "key_works": [
     {
       "evidence_id": "从工具结果里拿到的 evidence_id",
@@ -167,6 +168,7 @@ def _parse_dossier(raw_output: str) -> dict:
             "reader_context": {},
             "core_intuition": "",
             "running_example": "",
+            "primary_work_title": "",
             "key_works": [],
             "background_notes": [],
             "open_questions": [],
@@ -189,6 +191,7 @@ def _normalize_dossier(dossier: dict) -> dict:
     dossier["reader_context"] = reader_context
     dossier.setdefault("core_intuition", "")
     dossier.setdefault("running_example", "")
+    dossier.setdefault("primary_work_title", "")
     dossier.setdefault("background_notes", [])
     dossier.setdefault("open_questions", [])
     dossier.setdefault("narrative_angle", "")
@@ -202,7 +205,7 @@ def _normalize_dossier(dossier: dict) -> dict:
 
 def _log_dossier_gaps(dossier: dict) -> None:
     gaps = []
-    for key in ("beginner_context", "core_intuition", "running_example"):
+    for key in ("beginner_context", "core_intuition", "running_example", "primary_work_title"):
         if not str(dossier.get(key) or "").strip():
             gaps.append(key)
     reader_context = dossier.get("reader_context") or {}

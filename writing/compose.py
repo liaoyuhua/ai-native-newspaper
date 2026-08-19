@@ -83,6 +83,7 @@ def compose_article(
                 "text": checked,
                 "role": section.get("role", ""),
                 "card_index": section.get("card_index"),
+                "method_role": section.get("method_role"),
             }
         )
 
@@ -115,7 +116,8 @@ def compose_article(
     # 在把内部 evidence marker 转成脚注编号之前做整篇 claim 审计，
     # 否则终审无法把正文论断映射回证据片段。
     quality = run_article_quality_gate(
-        article_title, thesis, section_texts, evidence_store, reader_review=reader_reviews[-1]
+        article_title, thesis, section_texts, evidence_store,
+        reader_review=reader_reviews[-1], mechanism_cards=high_cards,
     )
 
     citation_order: list[str] = []
@@ -178,6 +180,7 @@ def compose_article(
         "claim_ledger": evidence_store.claim_list(),
         "generation": {
             "outline_model": outline.get("_model_used", config.MODEL_WRITING),
+            "frame_revision_model": outline.get("_frame_revision_model", ""),
             "draft_model": draft_model,
             "fallback_used": draft_model != config.MODEL_WRITING or outline.get("_model_used") != config.MODEL_WRITING,
         },

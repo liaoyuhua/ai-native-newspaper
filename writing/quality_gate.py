@@ -59,14 +59,20 @@ FINAL_REVIEW_PROMPT = """\
 
 fatal_issues 包含任何必须阻止发布的问题：thesis_missing、mechanism_unclear、major_repetition、
 forced_connection、unsupported_core_claim、ai_template_prose、scope_failure。
+blocking_revisions 必须列出虽可修但在修复前不能发布的问题，category 只能是：
+central_thesis_overclaim、primary_method_underexplained、evidence_missing_for_core_claim、
+mechanism_result_disconnect、metaphor_density。普通措辞偏好只放 revision_priorities。
 按绝对标准评估，不要因为文章已经写完而倾向通过。
-只返回 JSON：{"scores":{...},"fatal_issues":[],"strengths":[],"revision_priorities":[],"overall_pass":false}
+只返回 JSON：{"scores":{...},"fatal_issues":[],"blocking_revisions":[{"category":"...","instruction":"..."}],
+"strengths":[],"revision_priorities":[],"overall_pass":false}
 """
 
 CLAIM_REPAIR_PROMPT = """\
 你是技术文章的事实编辑。根据文章级 claim 审计反馈，只修复当前小节中被点名的问题。
 - partial：收窄或软化到证据实际支持的范围。
 - unsupported：若下方证据明确支持修正后的表述，可改写并在句末加对应【EV:evidence_id】；否则删除。
+- unmarked_inference / overstated_inference：加上明确限定并收窄结论；“正是、证明、只剩、必然、彻底”等词
+  没有直接证据时必须删除或改成“可以理解为、一个可能解释是、更多承担”等可证据化表达。
 - 保留已有有效【EV:evidence_id】。只能使用下方真实提供的 evidence_id，禁止虚构引用。
 - 不要新增证据没有的数字、方法步骤或论文结论。
 - 不重写无关段落，不改变小节职责，不增加篇幅。
@@ -91,9 +97,13 @@ def run_article_quality_gate(
     sections: list[dict],
     evidence_store: EvidenceStore,
     reader_review: dict | None = None,
+    mechanism_cards: list[dict] | None = None,
 ) -> QualityGateResult:
     if not reader_review or not reader_review_passed(reader_review):
         raise ArticleQualityError("reader_background_not_proven", {"reader_review": reader_review or {}})
+    contract = _validate_article_contract(article_title, thesis, sections, mechanism_cards or [])
+    if not contract["pass"]:
+        raise ArticleQualityError("article_depth_contract_failed", {"depth_contract": contract})
     body = "\n\n".join(f"## {s.get('heading', '')}\n{s.get('text', '')}" for s in sections)
     audit_rounds = []
     audit = {}
@@ -120,7 +130,12 @@ def run_article_quality_gate(
     review["scores"] = normalized
     review["average"] = round(sum(normalized.values()) / len(normalized), 3) if normalized else 0.0
     fatal = [str(x) for x in review.get("fatal_issues", []) if str(x).strip()]
-    passed = review.get("overall_pass") is True and not fatal and review["average"] >= config.ARTICLE_MIN_FINAL_SCORE
+    blocking_revisions = [x for x in review.get("blocking_revisions", []) if x]
+    review["blocking_revisions"] = blocking_revisions
+    passed = (
+        review.get("overall_pass") is True and not fatal and not blocking_revisions
+        and review["average"] >= config.ARTICLE_MIN_FINAL_SCORE
+    )
     review["pass"] = passed
     if not passed:
         raise ArticleQualityError("editorial_final_review_failed", {"claim_audit": audit, "final_review": review})
@@ -158,8 +173,11 @@ def _register_and_find_blocking_claims(audit: dict, evidence_store: EvidenceStor
         if kind in {"fact", "reported_result"} and (not eids or support != "supported"):
             blocking.append({"text": text, "kind": kind, "evidence_ids": eids,
                              "support": support, "reason": raw.get("reason", "")})
-        # inference 是作者基于材料作出的解释，不要求来源逐字陈述；审计器负责确认它没有冒充事实。
-        # 只有 fact / reported_result 必须得到直接证据支持。
+        if kind == "inference":
+            issue = _inference_language_issue(text, eids, support)
+            if issue:
+                blocking.append({"text": text, "kind": kind, "evidence_ids": eids,
+                                 "support": issue, "reason": "推断语气强于证据"})
     return blocking
 
 
@@ -243,3 +261,56 @@ def _bounded_score(value) -> float:
         return max(1.0, min(5.0, float(value)))
     except (TypeError, ValueError):
         return 1.0
+
+
+_HEDGE_RE = re.compile(r"可能|可以推测|可推测|可以理解为|更合理的理解|一种解释|似乎|或许|未必|倾向于|更多承担|这意味着|从设计意图看|大致")
+_OVERCLAIM_RE = re.compile(r"证明了?|只剩|必然|正是|彻底|完全取代|根治|无疑")
+
+
+def _inference_language_issue(text: str, evidence_ids: list[str], support: str) -> str:
+    if _OVERCLAIM_RE.search(text) and not (evidence_ids and support == "supported"):
+        return "overstated_inference"
+    if not evidence_ids and not _HEDGE_RE.search(text):
+        return "unmarked_inference"
+    return ""
+
+
+def _plain_char_count(text: str) -> int:
+    text = MARKER_RE.sub("", str(text or ""))
+    text = re.sub(r"[`#>*_|\[\](){}\-]", "", text)
+    return len(re.sub(r"\s+", "", text))
+
+
+def _validate_article_contract(
+    title: str, thesis: str, sections: list[dict], mechanism_cards: list[dict]
+) -> dict:
+    body_chars = sum(_plain_char_count(s.get("text", "")) for s in sections)
+    mechanism_sections = [s for s in sections if s.get("role") == "mechanism"]
+    mechanism_chars = sum(_plain_char_count(s.get("text", "")) for s in mechanism_sections)
+    primary_indexes = {
+        i for i, card in enumerate(mechanism_cards) if card.get("method_role") == "primary_subject"
+    }
+    primary_sections = [s for s in mechanism_sections if s.get("card_index") in primary_indexes]
+    primary_chars = sum(_plain_char_count(s.get("text", "")) for s in primary_sections)
+    ratio = mechanism_chars / body_chars if body_chars else 0.0
+    issues = []
+    if body_chars < config.ARTICLE_MIN_BODY_CHARS:
+        issues.append(f"正文仅 {body_chars} 字，低于 {config.ARTICLE_MIN_BODY_CHARS} 字深度下限")
+    if ratio < config.ARTICLE_MIN_MECHANISM_RATIO:
+        issues.append(f"机制内容占比 {ratio:.1%}，低于 {config.ARTICLE_MIN_MECHANISM_RATIO:.0%}")
+    if not primary_indexes or not primary_sections:
+        issues.append("没有直接解释本期主角方法的机制节")
+    elif primary_chars < config.ARTICLE_MIN_PRIMARY_MECHANISM_CHARS:
+        issues.append(
+            f"主角机制仅 {primary_chars} 字，低于 {config.ARTICLE_MIN_PRIMARY_MECHANISM_CHARS} 字"
+        )
+    if _OVERCLAIM_RE.search(str(title) + "\n" + str(thesis)):
+        issues.append("标题或 thesis 含未经限定的绝对结论")
+    return {
+        "pass": not issues,
+        "issues": issues,
+        "body_chars": body_chars,
+        "mechanism_chars": mechanism_chars,
+        "mechanism_ratio": round(ratio, 3),
+        "primary_mechanism_chars": primary_chars,
+    }

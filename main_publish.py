@@ -15,7 +15,7 @@ from processing.run_manifest import RunManifest
 from render.build import build_article_page
 from research.agent import run_research
 from research.evidence import EvidenceStore
-from research.mechanism_cards import extract_and_attach_mechanism_cards
+from research.mechanism_cards import extract_and_attach_mechanism_cards, ensure_primary_mechanism_roles
 from weekutil import current_week_id, today_str, week_label
 from writing.compose import compose_article
 from writing.quality_gate import ArticleQualityError
@@ -87,6 +87,7 @@ def main() -> None:
         manifest.finish("failed", stage="research", error=str(exc))
         manifest.write(config.RUNS_DIR / f"{week_id}-publish.json")
         raise
+    dossier = ensure_primary_mechanism_roles(dossier)
     manifest.stage(
         "research_completed",
         evidence_count=len(evidence_store.all()),

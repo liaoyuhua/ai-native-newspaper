@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import re
+
 import config
 from processing.llm_client import chat_json_with_fallback
 from research.mechanism_cards import format_cards_for_prompt
@@ -25,6 +27,8 @@ OUTLINE_SYSTEM_PROMPT = """\
 4. beginner_context / core_intuition 只作背景素材，不要单独开「直觉」长章。
 5. context 必须建立最小背景模型：参与者、正常工作流、既有防御/旧方法、隐藏假设、新失败。
    每节声明 introduces / assumes / reader_questions_answered；专业概念必须先解释、后使用。
+6. method_role=primary_subject 的机制卡是本文主角，必须拥有独立机制节；背景卡只能服务于解释主角，不能反客为主。
+7. 标题、副标题和 thesis 使用直接技术语言。全文最多一个比喻；禁止“只剩、证明、必然、彻底取代”等超出证据的绝对结论。
 
 只返回 JSON：
 {
@@ -37,6 +41,7 @@ OUTLINE_SYSTEM_PROMPT = """\
       "heading": "...",
       "role": "context | mechanism | close",
       "card_index": null,
+      "method_role": "primary_subject | background | null",
       "goal": "撰写指令",
       "max_chars": 800,
       "evidence_ids": ["..."]
@@ -75,6 +80,7 @@ def generate_outline(topic_name: str, dossier: dict) -> dict:
         temperature=0.35,
     )
     outline = _enforce_outline(outline, high_cards, dossier.get("reader_context") or {})
+    outline = _repair_overstated_frame(outline, topic_name)
     outline["_model_used"] = model_used
     return outline
 
@@ -142,7 +148,14 @@ def _enforce_outline(outline: dict, high_cards: list[dict], reader_context: dict
             }
         sec["role"] = "mechanism"
         sec["card_index"] = idx
+        sec["method_role"] = card.get("method_role", "background")
         sec.setdefault("max_chars", 1100)
+        if sec["method_role"] == "primary_subject":
+            sec["max_chars"] = max(900, int(sec["max_chars"]))
+            sec["goal"] = (
+                str(sec.get("goal") or "")
+                + "；这是本文主角，必须讲清输入、数据/状态构造、至少3步控制流、训练目标或接口变化、关键结果与局限"
+            )
         eids = list(sec.get("evidence_ids") or [])
         if card.get("evidence_id") and card["evidence_id"] not in eids:
             eids.insert(0, card["evidence_id"])
@@ -174,4 +187,32 @@ def _enforce_outline(outline: dict, high_cards: list[dict], reader_context: dict
     fixed.append(close)
 
     outline["sections"] = fixed
+    return outline
+
+
+_OVERSTATED_RE = re.compile(r"只剩|证明了?|必然|彻底|完全取代|根治")
+_METAPHOR_RE = re.compile(r"刷漆|薄漆|揉进|黏土|铠甲|刺穿|拆弹|拼弹|时间胶囊|声音")
+
+
+def _repair_overstated_frame(outline: dict, topic_name: str) -> dict:
+    title = str(outline.get("title") or "")
+    subtitle = str(outline.get("subtitle") or "")
+    thesis = str(outline.get("thesis") or "")
+    if not (_OVERSTATED_RE.search(title + thesis) or len(_METAPHOR_RE.findall(title + subtitle)) > 1):
+        return outline
+    repaired, model_used = chat_json_with_fallback(
+        model=config.MODEL_EDITORIAL,
+        fallback_model=config.MODEL_WRITING_FALLBACK,
+        system_prompt=(
+            "你是技术刊物标题编辑。收窄过强结论并删除堆叠比喻，只返回 JSON："
+            '{"title":"直接、具体、无营销腔","subtitle":"说明方法与问题",'
+            '"thesis":"区分论文事实与作者判断，避免只剩/证明/必然/彻底等绝对词"}'
+        ),
+        user_prompt=f"话题：{topic_name}\n原标题：{title}\n原副标题：{subtitle}\n原 thesis：{thesis}",
+        temperature=0.15,
+    )
+    for key in ("title", "subtitle", "thesis"):
+        if str(repaired.get(key) or "").strip():
+            outline[key] = str(repaired[key]).strip()
+    outline["_frame_revision_model"] = model_used
     return outline

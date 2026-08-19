@@ -63,21 +63,13 @@ def extract_and_attach_mechanism_cards(dossier: dict, evidence_store: EvidenceSt
             cards.append(card)
 
     scored = [_finalize_card(c, evidence_store) for c in cards]
-    high = [c for c in scored if c.get("confidence") == "high"]
-    deep_n = int(getattr(config, "MECHANISM_DEEP_DIVE_CARDS", 2))
-    min_high = int(getattr(config, "MECHANISM_MIN_HIGH_CARDS", 1))
-
     dossier["mechanism_cards"] = scored
-    dossier["high_mechanism_cards"] = high[:deep_n]
-    if len(high) >= min_high:
-        dossier["publish_mode"] = "deep_dive"
-    else:
-        dossier["publish_mode"] = "insufficient"
+    ensure_primary_mechanism_roles(dossier)
 
     logger.info(
         "机制卡: 共 %d 张，high=%d，publish_mode=%s",
         len(scored),
-        len(high),
+        len(dossier.get("high_mechanism_cards") or []),
         dossier["publish_mode"],
     )
     for c in scored:
@@ -89,6 +81,28 @@ def extract_and_attach_mechanism_cards(dossier: dict, evidence_store: EvidenceSt
             c.get("thin_source", False),
             "; ".join((c.get("gaps") or [])[:2]) or "-",
         )
+    return dossier
+
+
+def ensure_primary_mechanism_roles(dossier: dict) -> dict:
+    """迁移新旧研究档案，并保证 deep_dive 至少包含一张主角 high 卡。"""
+    works = list(dossier.get("key_works") or [])
+    primary_title = str(dossier.get("primary_work_title") or "").strip()
+    if not primary_title and works:
+        primary_title = str(works[0].get("title") or "").strip()
+    cards = list(dossier.get("mechanism_cards") or [])
+    for card in cards:
+        card["method_role"] = (
+            "primary_subject" if _same_work(card.get("title", ""), primary_title) else "background"
+        )
+    high = [c for c in cards if c.get("confidence") == "high"]
+    primary_high = [c for c in high if c.get("method_role") == "primary_subject"]
+    background_high = [c for c in high if c.get("method_role") != "primary_subject"]
+    deep_n = int(getattr(config, "MECHANISM_DEEP_DIVE_CARDS", 2))
+    min_high = int(getattr(config, "MECHANISM_MIN_HIGH_CARDS", 1))
+    dossier["primary_work_title"] = primary_title
+    dossier["high_mechanism_cards"] = (primary_high + background_high)[:deep_n]
+    dossier["publish_mode"] = "deep_dive" if len(high) >= min_high and primary_high else "insufficient"
     return dossier
 
 
@@ -106,6 +120,7 @@ def format_cards_for_prompt(cards: list[dict]) -> str:
             f"evidence_id: {c.get('evidence_id', '')}\n"
             f"url: {c.get('url', '')}\n"
             f"confidence: {c.get('confidence', '')}\n"
+            f"method_role: {c.get('method_role', 'background')}\n"
             f"problem: {c.get('problem', '')}\n"
             f"inputs_outputs: {c.get('inputs_outputs', '')}\n"
             f"state_or_interface: {c.get('state_or_interface', '')}\n"
@@ -261,3 +276,12 @@ def _finalize_card(card: dict, evidence_store: EvidenceStore) -> dict:
     card.setdefault("inputs_outputs", "")
     card.setdefault("thin_source", False)
     return card
+
+
+def _same_work(title: str, primary_title: str) -> bool:
+    """标题归一化匹配；主角缺失时宁可 fail closed，不把背景工作误当主角。"""
+    def norm(value: str) -> str:
+        return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "", str(value).lower())
+
+    left, right = norm(title), norm(primary_title)
+    return bool(left and right and (left == right or left in right or right in left))

@@ -18,9 +18,12 @@ from sources.registry import SourceRegistry
 from writing.contracts import align_sections, validate_concept_dependencies
 from writing.reader_review import ensure_reader_context, reader_review_passed
 from writing.outline import _enforce_outline
+from writing.full_draft import _draft_depth_issues
 from writing.quality_gate import _keyword_overlap, _register_and_find_blocking_claims
+from writing.quality_gate import _inference_language_issue, _validate_article_contract
 from processing.topic_selection_v2 import promote_shortlist_candidate
 from sources.common import RawItem
+from research.mechanism_cards import ensure_primary_mechanism_roles
 
 
 class EditorialModelsTest(unittest.TestCase):
@@ -113,6 +116,28 @@ class EvidenceStoreTest(unittest.TestCase):
             model_confidence="low", steps_ok=True, state_ok=True, evidence_ok=True, thin_source=False
         ))
 
+    def test_primary_mechanism_is_selected_before_background(self):
+        dossier = {
+            "primary_work_title": "Synthetic Persona Pretraining",
+            "key_works": [],
+            "mechanism_cards": [
+                {"title": "Constitutional AI", "confidence": "high"},
+                {"title": "Synthetic Persona Pretraining", "confidence": "high"},
+            ],
+        }
+        ensure_primary_mechanism_roles(dossier)
+        self.assertEqual(dossier["publish_mode"], "deep_dive")
+        self.assertEqual(dossier["high_mechanism_cards"][0]["method_role"], "primary_subject")
+
+    def test_background_cards_cannot_substitute_for_primary_method(self):
+        dossier = {
+            "primary_work_title": "Synthetic Persona Pretraining",
+            "key_works": [],
+            "mechanism_cards": [{"title": "Constitutional AI", "confidence": "high"}],
+        }
+        ensure_primary_mechanism_roles(dossier)
+        self.assertEqual(dossier["publish_mode"], "insufficient")
+
 
 class FullDraftContractTest(unittest.TestCase):
     def test_missing_required_section_fails_closed(self):
@@ -140,6 +165,62 @@ class FullDraftContractTest(unittest.TestCase):
             "reason": "作者解释性推断",
         }]}
         self.assertEqual(_register_and_find_blocking_claims(audit, store), [])
+
+    def test_unmarked_strong_inference_is_blocking(self):
+        self.assertEqual(
+            _inference_language_issue("SPP 借用的正是这个框架", [], "supported"),
+            "overstated_inference",
+        )
+
+    def test_hedged_inference_is_allowed(self):
+        self.assertEqual(
+            _inference_language_issue("可以理解为，SPP 重新分配了训练职责", [], "supported"),
+            "",
+        )
+
+    def test_article_contract_requires_primary_method_depth(self):
+        sections = [
+            {"role": "context", "text": "背景" * 250},
+            {"role": "mechanism", "card_index": 0, "text": "背景机制" * 300},
+            {"role": "mechanism", "card_index": 1, "text": "主角机制" * 80},
+            {"role": "close", "text": "判断" * 100},
+        ]
+        cards = [
+            {"method_role": "background"},
+            {"method_role": "primary_subject"},
+        ]
+        report = _validate_article_contract("技术标题", "有限判断", sections, cards)
+        self.assertFalse(report["pass"])
+        self.assertTrue(any("主角机制" in issue for issue in report["issues"]))
+
+    def test_article_contract_rejects_overstated_thesis(self):
+        sections = [
+            {"role": "context", "text": "背景" * 300},
+            {"role": "mechanism", "card_index": 0, "text": "主角机制" * 400},
+            {"role": "close", "text": "判断" * 200},
+        ]
+        report = _validate_article_contract(
+            "技术标题", "post-training 只剩人格绑定", sections,
+            [{"method_role": "primary_subject"}],
+        )
+        self.assertFalse(report["pass"])
+        self.assertIn("标题或 thesis 含未经限定的绝对结论", report["issues"])
+
+    def test_draft_depth_repair_targets_primary_section(self):
+        outline = [
+            {"role": "context"},
+            {"role": "mechanism", "card_index": 0, "method_role": "background"},
+            {"role": "mechanism", "card_index": 1, "method_role": "primary_subject"},
+            {"role": "close"},
+        ]
+        sections = [
+            {"role": "context", "text": "背景" * 300},
+            {"role": "mechanism", "card_index": 0, "text": "背景机制" * 300},
+            {"role": "mechanism", "card_index": 1, "text": "主角" * 80},
+            {"role": "close", "text": "判断" * 200},
+        ]
+        issues = _draft_depth_issues(sections, outline)
+        self.assertTrue(any("主角机制" in issue for issue in issues))
 
     def test_concept_must_be_introduced_before_it_is_assumed(self):
         reader_context = {"prerequisites": [{
