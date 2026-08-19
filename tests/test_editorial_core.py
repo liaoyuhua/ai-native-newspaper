@@ -19,8 +19,10 @@ from writing.contracts import align_sections, validate_concept_dependencies
 from writing.reader_review import ensure_reader_context, reader_review_passed
 from writing.outline import _enforce_outline
 from writing.full_draft import _draft_depth_issues
-from writing.quality_gate import _keyword_overlap, _register_and_find_blocking_claims
+from writing.quality_gate import _keyword_overlap, _register_and_find_blocking_claims, _repair_blocking_sections
 from writing.quality_gate import _inference_language_issue, _validate_article_contract
+from writing.quality_gate import CLAIM_AUDIT_PROMPT
+from writing.full_draft import FULL_DRAFT_PROMPT
 from processing.topic_selection_v2 import promote_shortlist_candidate
 from sources.common import RawItem
 from research.mechanism_cards import ensure_primary_mechanism_roles
@@ -155,6 +157,16 @@ class FullDraftContractTest(unittest.TestCase):
         unrelated = "这一节解释跨技能工件传递。"
         self.assertGreater(_keyword_overlap(claim, relevant), _keyword_overlap(claim, unrelated))
 
+    def test_claim_repair_rejects_section_collapse(self):
+        sections = [{"heading": "机制", "text": "原始机制解释" * 100}]
+        with patch("writing.quality_gate.chat_text", return_value="删到只剩一句"):
+            _repair_blocking_sections(
+                sections,
+                [{"text": "原始机制解释", "kind": "fact", "evidence_ids": []}],
+                EvidenceStore(),
+            )
+        self.assertEqual(sections[0]["text"], "原始机制解释" * 100)
+
     def test_explicit_inference_does_not_require_direct_source_statement(self):
         store = EvidenceStore()
         audit = {"claims": [{
@@ -177,6 +189,20 @@ class FullDraftContractTest(unittest.TestCase):
             _inference_language_issue("可以理解为，SPP 重新分配了训练职责", [], "supported"),
             "",
         )
+
+    def test_normal_author_synthesis_does_not_need_sentence_level_hedge(self):
+        self.assertEqual(
+            _inference_language_issue("这些结果的含义是后训练更像方向选择", [], "unsupported"),
+            "",
+        )
+
+    def test_prompts_target_evidence_honesty_not_sentence_level_proof(self):
+        self.assertIn("事实可靠、推断诚实", CLAIM_AUDIT_PROMPT)
+        self.assertIn("不要求每句话重复", CLAIM_AUDIT_PROMPT)
+
+    def test_writing_prompt_preserves_product_terms(self):
+        self.assertIn("Skills（可复用的任务说明与资源包）", FULL_DRAFT_PROMPT)
+        self.assertIn("普通能力语境中的 skills", FULL_DRAFT_PROMPT)
 
     def test_article_contract_requires_primary_method_depth(self):
         sections = [

@@ -2,9 +2,9 @@
   {
     "week_id": "2026-W34",
     "week_label": "2026 年第 34 周",
-    "title": "把对齐揉进黏土：为什么 post-training 只剩绑定人格",
-    "subtitle": "从 token zero 装进一个声音，而不是最后刷一层漆",
-    "date": "2026-08-17"
+    "title": "FDR 控制与置信失效：LLM 事实裁判的双阈值校准",
+    "subtitle": "Clopper–Pearson 联合校准与检索回退把弃权变成有限样本风险合同，但合同不覆盖置信信号本身在分布偏移下的失真",
+    "date": "2026-08-20"
   },
   {
     "week_id": "2026-W33",

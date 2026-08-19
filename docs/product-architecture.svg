@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
   <title id="title">深潜 AI 周刊产品架构</title>
-  <desc id="desc">系统从公开技术信号中发现重要选题，经编辑决策、深度研究、证据核查、写作和冷启动读者审稿，最终发布每周短深文，并将编辑记忆反馈给下一周。</desc>
+  <desc id="desc">系统从公开技术信号中发现重要选题，经编辑决策后，由研究助理、主编和事实编辑协作完成每周短深文，并将编辑记忆反馈给下一周。</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#fffdf9"/>
@@ -32,7 +32,7 @@
   <circle cx="92" cy="560" r="150" fill="#c96b52" opacity=".045"/>
 
   <text x="64" y="72" class="serif title">从一周的 AI 噪声，到一个值得理解的问题</text>
-  <text x="64" y="104" class="sans subtitle">选题判断与深度写作协作，把公开信号转化为可信、可读、有判断的 Weekly Deep Dive</text>
+  <text x="64" y="104" class="sans subtitle">选题判断与三角色编辑部协作，把公开信号转化为可信、可读、有判断的短深文</text>
 
   <path d="M196 284 H266 M426 284 H496 M656 284 H726 M886 284 H956" stroke="#9a3324" stroke-width="2.5" marker-end="url(#arrow)" opacity=".8"/>
 
@@ -57,13 +57,13 @@
     <path d="M302 338 l14 14 35-40" fill="none" stroke="#9a3324" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 
     <circle cx="543" cy="212" r="18" fill="url(#accent)"/><text x="543" y="217" text-anchor="middle" class="index">03</text>
-    <text x="530" y="260" class="stage">深度研究</text>
-    <text x="530" y="290" class="copy"><tspan x="530">追溯一手来源</tspan><tspan x="530" dy="22">拆解 1–2 个机制</tspan></text>
+    <text x="530" y="260" class="stage">研究助理</text>
+    <text x="530" y="290" class="copy"><tspan x="530">追溯一手证据</tspan><tspan x="530" dy="22">整理机制与边界</tspan></text>
     <circle cx="558" cy="330" r="21" fill="none" stroke="#9a3324" stroke-width="3"/><path d="M574 346 l20 20" stroke="#9a3324" stroke-width="4" stroke-linecap="round"/>
 
     <circle cx="773" cy="212" r="18" fill="url(#accent)"/><text x="773" y="217" text-anchor="middle" class="index">04</text>
-    <text x="760" y="260" class="stage">多重审稿</text>
-    <text x="760" y="290" class="copy"><tspan x="760">事实与推断分离</tspan><tspan x="760" dy="22">陌生读者也能读懂</tspan></text>
+    <text x="752" y="260" class="stage">主编 / 事实编辑</text>
+    <text x="760" y="290" class="copy"><tspan x="760">完整写作 · 一次核查</tspan><tspan x="760" dy="22">必要时有限修订</tspan></text>
     <rect x="763" y="326" width="49" height="34" rx="4" fill="none" stroke="#9a3324" stroke-width="3"/><path d="M774 338 h27 M774 348 h20" stroke="#c96b52" stroke-width="2"/>
 
     <circle cx="1003" cy="212" r="18" fill="url(#accent)"/><text x="1003" y="217" text-anchor="middle" class="index">05</text>

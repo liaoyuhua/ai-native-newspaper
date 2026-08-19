@@ -7,12 +7,18 @@ from __future__ import annotations
 
 import json
 import re
+import hashlib
+import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 import config
-from processing.llm_client import chat_json, chat_text
+from processing.llm_client import chat_json, chat_json_with_fallback, chat_text
 from research.evidence import EvidenceStore
 from writing.reader_review import reader_review_passed
+from writing.review_checkpoint import write_review_checkpoint
+
+logger = logging.getLogger(__name__)
 
 MARKER_RE = re.compile(r"【EV:([^】]+)】")
 FINAL_SCORE_DIMENSIONS = (
@@ -33,14 +39,18 @@ class ArticleQualityError(RuntimeError):
 
 
 CLAIM_AUDIT_PROMPT = """\
-你是技术文章的 claim 审计员。逐项找出文章中所有可由外部资料核实的陈述，不能只检查带引用的句子。
+你是技术文章的事实边界审计员。只找出文章中可由外部资料核实的陈述，不能只检查带引用的句子。
 分类：fact（机制/架构/时间等事实）、reported_result（实验或性能结果）、inference（作者从材料推出的解释）、
 author_judgment（价值判断）。
 
 规则：
 - fact/reported_result 必须带有效 evidence_id，且 excerpt 真正支持完整陈述；否则 unsupported 或 partial。
-- inference 可以没有直接证据，但正文必须明确表现为推断，不能冒充来源结论。
+- inference 可以没有直接证据。作者可以自然地综合、解释和命名一个模式，不要求每句话重复“可能/可以推测”。
+- inference 只有在使用“证明、必然、唯一原因、完全取代”等强断言，虚构因果，或把有限实验外推到所有模型时，
+  才需要作为潜在问题列出；普通的“这说明、关键区别是、这些结果的含义是”属于正常作者分析。
 - author_judgment 不要求引用。
+- 不要把段落总结、行文连接句、类比、文章结构判断或没有新增外部事实的概念框架枚举为 claim。
+- 目标是检查“事实可靠、推断诚实”，不是要求文章每句话都能在来源中找到逐字对应。
 - 注意表格、标题、图注、伪代码中的陈述。
 
 只返回 JSON：{"claims":[{"text":"文章中的准确原句或紧凑转述","kind":"fact|reported_result|inference|author_judgment",
@@ -55,7 +65,8 @@ FINAL_REVIEW_PROMPT = """\
 - mechanism_depth：读者能否复述 1–2 个关键机制；
 - editorial_voice：是否有克制的人类判断，而非模板化金句和强行比喻；
 - weekly_scope：是否达到周刊深度且没有摊成综述；
-- evidence_honesty：事实、推断与判断是否诚实分开。
+- evidence_honesty：数字、方法和实验范围是否可靠；读者能否分辨来源事实与作者分析。
+  不要求正常的作者综合判断逐句带免责声明，避免把文章改成充满“可能/可以推测”的审计报告。
 
 fatal_issues 包含任何必须阻止发布的问题：thesis_missing、mechanism_unclear、major_repetition、
 forced_connection、unsupported_core_claim、ai_template_prose、scope_failure。
@@ -71,8 +82,8 @@ CLAIM_REPAIR_PROMPT = """\
 你是技术文章的事实编辑。根据文章级 claim 审计反馈，只修复当前小节中被点名的问题。
 - partial：收窄或软化到证据实际支持的范围。
 - unsupported：若下方证据明确支持修正后的表述，可改写并在句末加对应【EV:evidence_id】；否则删除。
-- unmarked_inference / overstated_inference：加上明确限定并收窄结论；“正是、证明、只剩、必然、彻底”等词
-  没有直接证据时必须删除或改成“可以理解为、一个可能解释是、更多承担”等可证据化表达。
+- overstated_inference：只收窄“正是、证明、只剩、必然、彻底、唯一原因”等强断言。
+  普通作者综合不需要每句话添加“可能/可以理解为”，不要制造免责声明堆积。
 - 保留已有有效【EV:evidence_id】。只能使用下方真实提供的 evidence_id，禁止虚构引用。
 - 不要新增证据没有的数字、方法步骤或论文结论。
 - 不重写无关段落，不改变小节职责，不增加篇幅。
@@ -98,19 +109,58 @@ def run_article_quality_gate(
     evidence_store: EvidenceStore,
     reader_review: dict | None = None,
     mechanism_cards: list[dict] | None = None,
+    checkpoint: dict | None = None,
+    checkpoint_path: Path | None = None,
 ) -> QualityGateResult:
+    checkpoint = checkpoint if checkpoint is not None else {}
     if not reader_review or not reader_review_passed(reader_review):
         raise ArticleQualityError("reader_background_not_proven", {"reader_review": reader_review or {}})
     contract = _validate_article_contract(article_title, thesis, sections, mechanism_cards or [])
     if not contract["pass"]:
         raise ArticleQualityError("article_depth_contract_failed", {"depth_contract": contract})
     body = "\n\n".join(f"## {s.get('heading', '')}\n{s.get('text', '')}" for s in sections)
-    audit_rounds = []
-    audit = {}
-    for round_index in range(config.ARTICLE_CLAIM_AUDIT_ROUNDS):
+    audit_rounds = list(checkpoint.get("claim_audit_rounds") or [])
+    audit = dict(checkpoint.get("claim_audit") or {})
+    # 如果常规预算最后只剩推断措辞问题，用确定性降调修复并允许一次受限重验。
+    if (
+        not checkpoint.get("claim_audit_complete")
+        and len(audit_rounds) >= config.ARTICLE_CLAIM_AUDIT_ROUNDS
+        and _only_inference_language_issues(audit.get("blocking_claims") or [])
+        and not checkpoint.get("inference_language_recheck")
+    ):
+        changed = _soften_inference_language(sections, audit.get("blocking_claims") or [])
+        if changed:
+            checkpoint.update({
+                "sections": sections,
+                "inference_language_recheck": True,
+                "claim_audit_complete": False,
+            })
+            write_review_checkpoint(checkpoint_path, checkpoint)
+            logger.info("常规审计预算后仅剩推断措辞问题，确定性降调 %d 处并追加一次重验", changed)
+    if (
+        not checkpoint.get("claim_audit_complete")
+        and len(audit_rounds) >= config.ARTICLE_CLAIM_AUDIT_ROUNDS
+        and 0 < len(audit.get("blocking_claims") or []) <= 2
+        and not checkpoint.get("terminal_claim_recheck")
+        and not checkpoint.get("inference_language_recheck")
+    ):
+        _repair_blocking_sections(sections, audit.get("blocking_claims") or [], evidence_store)
+        checkpoint.update({
+            "sections": sections,
+            "terminal_claim_recheck": True,
+            "claim_audit_complete": False,
+        })
+        write_review_checkpoint(checkpoint_path, checkpoint)
+        logger.info("常规审计预算后仅剩 %d 条事实问题，修复后追加一次收尾重验", len(audit.get("blocking_claims") or []))
+    extra_recheck = checkpoint.get("inference_language_recheck") or checkpoint.get("terminal_claim_recheck")
+    audit_limit = config.ARTICLE_CLAIM_AUDIT_ROUNDS + (1 if extra_recheck else 0)
+    audit_start = audit_limit if checkpoint.get("claim_audit_complete") else len(audit_rounds)
+    for round_index in range(audit_start, audit_limit):
         body = "\n\n".join(f"## {s.get('heading', '')}\n{s.get('text', '')}" for s in sections)
         evidence_store.clear_claims()
-        audit = _audit_claims(body, evidence_store)
+        audit = _audit_claims_by_section(
+            sections, evidence_store, round_index + 1, checkpoint, checkpoint_path,
+        )
         blocking = _register_and_find_blocking_claims(audit, evidence_store)
         if not audit.get("claims"):
             blocking.append({"reason": "claim_auditor_returned_no_claims"})
@@ -118,13 +168,36 @@ def run_article_quality_gate(
         audit["pass"] = not blocking
         audit["round"] = round_index + 1
         audit_rounds.append(audit)
+        checkpoint.update({
+            "claim_audit": audit,
+            "claim_audit_rounds": audit_rounds,
+            "sections": sections,
+        })
+        checkpoint.pop("claim_audit_partial", None)
+        write_review_checkpoint(checkpoint_path, checkpoint)
         if not blocking:
+            checkpoint["claim_audit_complete"] = True
+            write_review_checkpoint(checkpoint_path, checkpoint)
             break
-        if round_index + 1 >= config.ARTICLE_CLAIM_AUDIT_ROUNDS:
+        if round_index + 1 >= audit_limit:
             raise ArticleQualityError("claim_audit_failed", {"claim_audit": audit, "claim_audit_rounds": audit_rounds})
         _repair_blocking_sections(sections, blocking, evidence_store)
+        checkpoint.update({"sections": sections, "claim_audit_complete": False})
+        write_review_checkpoint(checkpoint_path, checkpoint)
 
-    review = _final_review(article_title, thesis, body)
+    # 从 checkpoint 恢复通过的审计时，重建 claim ledger。
+    if checkpoint.get("claim_audit_complete") and audit:
+        evidence_store.clear_claims()
+        restored_blocking = _register_and_find_blocking_claims(audit, evidence_store)
+        if restored_blocking:
+            raise ArticleQualityError("claim_audit_checkpoint_invalid", {"blocking_claims": restored_blocking})
+
+    body = "\n\n".join(f"## {s.get('heading', '')}\n{s.get('text', '')}" for s in sections)
+    review = dict(checkpoint.get("final_review") or {})
+    if not review:
+        review = _final_review(article_title, thesis, body)
+        checkpoint["final_review"] = review
+        write_review_checkpoint(checkpoint_path, checkpoint)
     scores = review.get("scores") or {}
     normalized = {key: _bounded_score(scores.get(key)) for key in FINAL_SCORE_DIMENSIONS}
     review["scores"] = normalized
@@ -140,6 +213,9 @@ def run_article_quality_gate(
     if not passed:
         raise ArticleQualityError("editorial_final_review_failed", {"claim_audit": audit, "final_review": review})
     audit["audit_rounds"] = len(audit_rounds)
+    checkpoint["quality_complete"] = True
+    checkpoint["sections"] = sections
+    write_review_checkpoint(checkpoint_path, checkpoint)
     return QualityGateResult(audit, review, reader_review)
 
 
@@ -152,12 +228,47 @@ def _audit_claims(body: str, evidence_store: EvidenceStore) -> dict:
         ev = evidence_store.get(eid)
         if ev:
             evidence.append({"id": eid, "title": ev.title, "url": ev.url, "excerpt": ev.excerpt[:2400]})
-    return chat_json(
+    result, _ = chat_json_with_fallback(
         model=config.MODEL_FACTCHECK,
+        fallback_model=config.MODEL_FACTCHECK_FALLBACK,
         system_prompt=CLAIM_AUDIT_PROMPT,
         user_prompt="文章：\n" + body + "\n\n可用证据：\n" + json.dumps(evidence, ensure_ascii=False),
         temperature=0.0,
     )
+    return result
+
+
+def _audit_claims_by_section(
+    sections: list[dict],
+    evidence_store: EvidenceStore,
+    round_number: int,
+    checkpoint: dict,
+    checkpoint_path: Path | None,
+) -> dict:
+    """逐节审计并逐节落盘，限制输出规模且支持失败后续跑。"""
+    digest = hashlib.sha256(
+        json.dumps(sections, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:16]
+    partial = checkpoint.get("claim_audit_partial") or {}
+    if partial.get("round") != round_number or partial.get("sections_digest") != digest:
+        partial = {"round": round_number, "sections_digest": digest, "results": {}}
+    results = partial.setdefault("results", {})
+    for index, section in enumerate(sections):
+        key = str(index)
+        if key in results:
+            continue
+        logger.info(
+            "文章 claim audit round=%d section=%d/%d heading=%s",
+            round_number, index + 1, len(sections), section.get("heading", ""),
+        )
+        body = f"## {section.get('heading', '')}\n{section.get('text', '')}"
+        results[key] = _audit_claims(body, evidence_store)
+        checkpoint["claim_audit_partial"] = partial
+        write_review_checkpoint(checkpoint_path, checkpoint)
+    claims = []
+    for index in range(len(sections)):
+        claims.extend((results.get(str(index)) or {}).get("claims") or [])
+    return {"claims": claims, "section_audits": results}
 
 
 def _register_and_find_blocking_claims(audit: dict, evidence_store: EvidenceStore) -> list[dict]:
@@ -179,6 +290,33 @@ def _register_and_find_blocking_claims(audit: dict, evidence_store: EvidenceStor
                 blocking.append({"text": text, "kind": kind, "evidence_ids": eids,
                                  "support": issue, "reason": "推断语气强于证据"})
     return blocking
+
+
+def _only_inference_language_issues(blocking: list[dict]) -> bool:
+    return bool(blocking) and all(
+        problem.get("kind") == "inference"
+        and problem.get("support") in {"unmarked_inference", "overstated_inference"}
+        for problem in blocking
+    )
+
+
+def _soften_inference_language(sections: list[dict], blocking: list[dict]) -> int:
+    """只处理审计已定位的原句，不新增事实或改动引用。"""
+    changed = 0
+    for problem in blocking:
+        claim = str(problem.get("text") or "").strip()
+        if not claim:
+            continue
+        softened = claim.replace("证明了", "提示了").replace("证明", "提示")
+        if not _HEDGE_RE.search(softened):
+            softened = "一种可能的解释是，" + softened
+        for section in sections:
+            text = str(section.get("text") or "")
+            if claim in text:
+                section["text"] = text.replace(claim, softened, 1)
+                changed += 1
+                break
+    return changed
 
 
 def _final_review(title: str, thesis: str, body: str) -> dict:
@@ -236,7 +374,7 @@ def _repair_blocking_sections(
                 evidence.append({"id": eid, "title": ev.title, "excerpt": ev.excerpt[:2200]})
             if len(evidence) >= 4:
                 break
-        section["text"] = chat_text(
+        candidate_text = chat_text(
             model=config.MODEL_EDITORIAL,
             system_prompt=CLAIM_REPAIR_PROMPT,
             user_prompt=(
@@ -246,6 +384,15 @@ def _repair_blocking_sections(
             ),
             temperature=0.2,
         )
+        original_chars = plain_char_count(text)
+        candidate_chars = plain_char_count(candidate_text)
+        if original_chars and candidate_chars < original_chars * 0.75:
+            logger.warning(
+                "claim repair 导致章节过度缩水，拒绝候选并保留原文: heading=%s %d->%d",
+                section.get("heading", ""), original_chars, candidate_chars,
+            )
+        else:
+            section["text"] = candidate_text
     if pending:
         raise ArticleQualityError("claim_repair_target_not_found", {"blocking_claims": pending})
 
@@ -270,12 +417,10 @@ _OVERCLAIM_RE = re.compile(r"证明了?|只剩|必然|正是|彻底|完全取代
 def _inference_language_issue(text: str, evidence_ids: list[str], support: str) -> str:
     if _OVERCLAIM_RE.search(text) and not (evidence_ids and support == "supported"):
         return "overstated_inference"
-    if not evidence_ids and not _HEDGE_RE.search(text):
-        return "unmarked_inference"
     return ""
 
 
-def _plain_char_count(text: str) -> int:
+def plain_char_count(text: str) -> int:
     text = MARKER_RE.sub("", str(text or ""))
     text = re.sub(r"[`#>*_|\[\](){}\-]", "", text)
     return len(re.sub(r"\s+", "", text))
@@ -284,14 +429,14 @@ def _plain_char_count(text: str) -> int:
 def _validate_article_contract(
     title: str, thesis: str, sections: list[dict], mechanism_cards: list[dict]
 ) -> dict:
-    body_chars = sum(_plain_char_count(s.get("text", "")) for s in sections)
+    body_chars = sum(plain_char_count(s.get("text", "")) for s in sections)
     mechanism_sections = [s for s in sections if s.get("role") == "mechanism"]
-    mechanism_chars = sum(_plain_char_count(s.get("text", "")) for s in mechanism_sections)
+    mechanism_chars = sum(plain_char_count(s.get("text", "")) for s in mechanism_sections)
     primary_indexes = {
         i for i, card in enumerate(mechanism_cards) if card.get("method_role") == "primary_subject"
     }
     primary_sections = [s for s in mechanism_sections if s.get("card_index") in primary_indexes]
-    primary_chars = sum(_plain_char_count(s.get("text", "")) for s in primary_sections)
+    primary_chars = sum(plain_char_count(s.get("text", "")) for s in primary_sections)
     ratio = mechanism_chars / body_chars if body_chars else 0.0
     issues = []
     if body_chars < config.ARTICLE_MIN_BODY_CHARS:

@@ -2,14 +2,14 @@
   "run_id": "2026-W34-human-selection",
   "workflow": "human_candidate_selection",
   "status": "completed",
-  "started_at": "2026-08-17T16:52:41.285761+00:00",
-  "finished_at": "2026-08-17T16:52:41.285776+00:00",
-  "python_version": "3.12.13",
+  "started_at": "2026-08-19T16:21:45.998546+00:00",
+  "finished_at": "2026-08-19T16:21:45.998578+00:00",
+  "python_version": "3.10.10",
   "config": {},
   "stages": [],
   "decision": {
-    "selected_question": "Can alignment be baked into a model from token zero via synthetic personas, and what does that change about post-training?",
-    "candidate_rank": 5,
-    "override_reason": "比较新颖"
+    "selected_question": "Can uncertainty-aware abstention provably bound the risk of LLM judges?",
+    "candidate_rank": 2,
+    "override_reason": "自动首选题的主角 D2ACCI 未形成 high 机制卡；按 shortlist 顺序切换到具备可证明风险界和可抓取一手论文的候选题。"
   }
 }

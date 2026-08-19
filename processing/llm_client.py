@@ -27,6 +27,10 @@ _client_default: OpenAI | None = None
 _client_cheap: OpenAI | None = None
 
 
+class ModelJSONError(ValueError):
+    """模型多次返回空内容或非法 JSON。"""
+
+
 def get_client(model: str | None = None) -> OpenAI:
     """按模型名选择默认档或便宜档 client。"""
     global _client_default, _client_cheap
@@ -113,7 +117,7 @@ def chat_json(
     temperature: float = 0.3,
 ) -> dict[str, Any]:
     """调用模型并要求返回严格 JSON。"""
-    last_error: json.JSONDecodeError | None = None
+    last_error: Exception | None = None
     for attempt in range(2):
         resp = _create_completion(
             **_request_kwargs(
@@ -127,13 +131,16 @@ def chat_json(
             )
         )
         content = resp.choices[0].message.content
+        if not (content or "").strip():
+            last_error = ModelJSONError("模型返回空内容，无法解析 JSON")
+            logger.warning("模型返回空 JSON 内容（第 %d/2 次）", attempt + 1)
+            continue
         try:
             return _parse_json_content(content)
         except json.JSONDecodeError as exc:
             last_error = exc
             logger.warning("模型未返回合法 JSON（第 %d/2 次）：%s", attempt + 1, (content or "")[:500])
-    assert last_error is not None
-    raise last_error
+    raise ModelJSONError(f"模型连续两次未返回合法 JSON: {last_error}") from last_error
 
 
 def chat_json_with_fallback(
@@ -147,7 +154,7 @@ def chat_json_with_fallback(
     """仅在主模型不可用时显式降级，并返回实际使用的模型名。"""
     try:
         return chat_json(model, system_prompt, user_prompt, temperature), model
-    except (RateLimitError, APIStatusError, APIConnectionError) as exc:
+    except (RateLimitError, APIStatusError, APIConnectionError, ModelJSONError) as exc:
         if not fallback_model or fallback_model == model:
             raise
         logger.warning("模型 %s 不可用，写作阶段降级到 %s: %s", model, fallback_model, exc)
@@ -182,6 +189,7 @@ def run_tool_loop(
     tool_impls: dict[str, Callable[..., Any]],
     max_tool_calls: int,
     on_step: Callable[[str, dict, Any], None] | None = None,
+    fallback_model: str = "",
 ) -> str:
     """
     ReAct 风格的自主工具调用循环。
@@ -196,6 +204,7 @@ def run_tool_loop(
 
     calls_made = 0
     finish_prompted = False
+    active_model = model
     while True:
         force_finish = calls_made >= max_tool_calls
         call_kwargs: dict[str, Any] = {
@@ -215,7 +224,17 @@ def run_tool_loop(
             )
             finish_prompted = True
 
-        resp = _create_completion(**_request_kwargs(model, **call_kwargs))
+        try:
+            resp = _create_completion(**_request_kwargs(active_model, **call_kwargs))
+        except (RateLimitError, APIStatusError, APIConnectionError) as exc:
+            if not fallback_model or fallback_model == active_model:
+                raise
+            logger.warning(
+                "研究模型 %s 不可用，保留当前工具上下文并切换到 %s: %s",
+                active_model, fallback_model, exc,
+            )
+            active_model = fallback_model
+            resp = _create_completion(**_request_kwargs(active_model, **call_kwargs))
         msg = resp.choices[0].message
 
         if force_finish or not msg.tool_calls:

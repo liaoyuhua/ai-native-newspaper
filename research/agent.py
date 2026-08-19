@@ -137,6 +137,7 @@ def run_research(
         tools=TOOL_SCHEMAS,
         tool_impls=tool_impls,
         max_tool_calls=config.RESEARCH_MAX_TOOL_CALLS,
+        fallback_model=config.MODEL_WRITING_FALLBACK,
         on_step=on_step,
     )
 

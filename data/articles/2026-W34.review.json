@@ -1,0 +1,2153 @@
+{
+  "checkpoint_version": 2,
+  "draft_fingerprint": "b875f9e55d63cb04",
+  "reader_complete": true,
+  "reader_reviews": [
+    {
+      "checks": {
+        "can_identify_system": true,
+        "can_define_core_objects": true,
+        "can_explain_normal_workflow": true,
+        "can_explain_old_approach": true,
+        "can_explain_new_failure": true
+      },
+      "blocking_gaps": [],
+      "nonblocking_terms": [
+        {
+          "term": "residual stream",
+          "recommended_action": "leave"
+        },
+        {
+          "term": "activation steering",
+          "recommended_action": "leave"
+        },
+        {
+          "term": "probe",
+          "recommended_action": "expand"
+        },
+        {
+          "term": "AUROC",
+          "recommended_action": "leave"
+        },
+        {
+          "term": "cross-domain transfer",
+          "recommended_action": "leave"
+        },
+        {
+          "term": "identity initialization",
+          "recommended_action": "leave"
+        },
+        {
+          "term": "αNLI",
+          "recommended_action": "expand"
+        },
+        {
+          "term": "MuSiQue",
+          "recommended_action": "expand"
+        },
+        {
+          "term": "TruthfulQA",
+          "recommended_action": "leave"
+        },
+        {
+          "term": "Alpaca",
+          "recommended_action": "leave"
+        }
+      ],
+      "unanswered_questions": [],
+      "repair_instructions": "只修复 blocking_gaps；不要为 nonblocking_terms 扩写背景",
+      "background_pass": true
+    }
+  ],
+  "sections": [
+    {
+      "heading": "为什么答题和拒答不能各管各的",
+      "text": "设一个检索式问答助手：给一段检索到的段落和一个事实问题，如果段落有答案就回答，没有答案就说“我不知道”。例如，问题“这项临床试验达到了主要终点的哪个阶段？”，段落讨论了试验设计却通篇没写阶段编号，此时系统应拒答；反之，若段落写明“Phase III 达到主要终点”，系统应回答“Phase III”。评测的是三分类：答对（可答时答对）、该拒时拒（不可答时拒答）、该答时答（可答时给出正确答案）。\n\n大语言模型在这个任务上有两个耦合的毛病：答案其实已经写进残差流（residual stream，模型各层之间传递的隐藏向量），生成时却仍然答错；输入信息不足时不会说“我不知道”，而是编造一个。过去人们分开治这两个毛病。一边是 activation steering / inference-time intervention：前向传播途中给隐藏状态加一个方向向量，不更新权重，把模型行为往目标方向推。代表性工作 ITI 在 TruthfulQA 上把 Alpaca 的诚实率从 32.5% 提到 65.1%【EV:ev_9f61bf690572】。另一边是线性探针 / 方向读取：把隐藏状态投影到一个固定方向得到标量分数，用来判断信息是否充分。YOPO 方法里那个零样本学到的信息充分性（sufficiency）方向 d，就是按这个思路读残差流的：用 AUROC 来评估它能否把可答与不可答样本区分开。AUROC 是不设阈值衡量一个分数能否把可答与不可答样本排开：1.0 表示完美排序，0.5 表示随机，所以 AUROC 不是准确率。\n\n但这两个部件各管各的时候没问题，放进同一次前向就出问题。YOPO 在网络的中间层（mid-stack）用一个条件式 steering 探针写入答案方向，同时用固定的 d 读取同一条残差流来判断是否拒答。结果初步显示，在小模型上，把读取从干净的前向过程（clean pass，未加方向向量）移到被 steering 写入方向后的前向过程（steered pass）之后，跨域迁移（cross-domain transfer）的 AUROC 会下降，降幅可达 8 个点【EV:ev_92016a8e88b8】。为什么不能直接看模型最后输出的“我不知道”概率？因为需要拒答时，模型常常会给一个高置信的错误答案；而中间残差流里的 sufficiency 方向已经把“信息不足”编码进去了，提前读这个信号能在更早阶段做出拒答决策。\n\n这意味着把答题和拒答硬拼在一条残差流上时，核心障碍不是训练更好的拒答门控（gate），而是 steering 写入破坏了 d 本来要读的那部分状态。换句话说，旧方法分开时都有效，但合在一起时它们共享的表示空间——也就是同一条残差流——发生了冲突：steering 改变了残差流里的隐藏状态分布，导致 d 的投影分数偏移。",
+      "role": "context",
+      "card_index": null,
+      "method_role": null
+    },
+    {
+      "heading": "一个只重建残差的小网络，如何恢复判断权",
+      "text": "YOPO 的目标是把答题和拒答放进同一次前向【EV:ev_ddadf1a966e0】。其核心是一个 conditional steering probe：该 probe 既把生成引导向残差流中已经编码的证据，又在输入不充分时写入拒答信号，从而避免多遍前向或基于 head 的拒答【EV:ev_ddadf1a966e0】。",
+      "role": "mechanism",
+      "card_index": 0,
+      "method_role": "primary_subject"
+    },
+    {
+      "heading": "Inference-Time Intervention: Eliciting Truthful Answers from a Language Model (Li et al., 2023)",
+      "text": "ITI 解决的是另一类问题：模型内部“知道”正确答案，但生成时说出来。ITI 的做法是：在推理时沿着少数 attention heads 的一组方向移动模型激活【EV:ev_9f61bf690572】。ITI 是低侵入且计算开销较低的方法【EV:ev_9f61bf690572】。\n\n在 instruction-finetuned LLaMA（Alpaca）上，ITI 把 TruthfulQA 的真实率从 32.5% 提高到 65.1%【EV:ev_9f61bf690572】。干预强度可以调节，用于在 truthfulness 与 helpfulness 之间取得平衡【EV:ev_9f61bf690572】。ITI 的数据效率很高，只需要几百个示例定位相关方向【EV:ev_9f61bf690572】。\n\n但 ITI 的干预只影响选中的少数 attention heads。论文也没有给出机制解释，不知道方向向量在表示里做了什么。对 YOPO 来说，ITI 显示“往激活里写方向”是可行的、低成本的；但 ITI 没有进一步处理写入之后如何读另一个方向。YOPO 的 steering 与 ITI 类似，都是在中间激活上写方向；区别在于 YOPO 的写入由 conditional steering probe 决定，而 ITI 用固定方向向量。但 ITI 不涉及读取其他方向，因此干扰问题未必会显现；这是 YOPO 试图解决的问题。",
+      "role": "mechanism",
+      "card_index": 1,
+      "method_role": "background"
+    },
+    {
+      "heading": "真正的成本不在读，而在写",
+      "text": "现有 steering 证据只支持思考模型中的部分推理行为由激活空间中的线性方向介导，并可被 steering vectors 控制【EV:ev_8a226fe7a7d2】；这不等于拒答可以不需要额外训练、只从残差流免费读出。若把 YOPO 的观察视作这类方向的一种情形，问题应转向同一块残差流上写答案与读充分性如何共处。容量增大时干扰是否反转、机制如何，仍有待验证；标签无关方向在 MuSiQue 上拟合是否本身就是一种弱监督（源域选择即归纳偏置），跨家族稳定性仍待验证；answer-or-abstain 基准是否容易泄漏表层捷径、如何系统性排除，仍是方法学开放问题。这些不是新路线，而是 YOPO 边界内的问题。",
+      "role": "close",
+      "card_index": null,
+      "method_role": null
+    }
+  ],
+  "claim_audit": {
+    "claims": [
+      {
+        "text": "答案其实已经写进残差流，生成时却仍然答错",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_92016a8e88b8"
+        ],
+        "support": "partial",
+        "reason": "摘要只说残差流已经编码了证据（evidence），未明确说“答案”本身已写入；但结合上下文可视为同一信息。"
+      },
+      {
+        "text": "输入信息不足时不会说“我不知道”，而是编造一个",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_92016a8e88b8"
+        ],
+        "support": "supported",
+        "reason": "摘要直接说“fails to detect when the input is insufficient to answer, so it confabulates”。"
+      },
+      {
+        "text": "ITI 在 TruthfulQA 上把 Alpaca 的诚实率从 32.5% 提到 65.1%",
+        "kind": "reported_result",
+        "evidence_ids": [
+          "ev_9f61bf690572"
+        ],
+        "support": "supported",
+        "reason": "摘要明确给出该数字。"
+      },
+      {
+        "text": "YOPO 方法里那个零样本学到的信息充分性（sufficiency）方向 d，就是按这个思路读残差流的：用 AUROC 来评估它能否把可答与不可答样本区分开。",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_92016a8e88b8"
+        ],
+        "support": "supported",
+        "reason": "摘要提到 zero-shot sufficiency direction d 读取残差流，且使用 AUROC 衡量迁移性能。"
+      },
+      {
+        "text": "YOPO 在网络的中间层（mid-stack）用一个条件式 steering 探针写入答案方向，同时用固定的 d 读取同一条残差流来判断是否拒答。",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_92016a8e88b8"
+        ],
+        "support": "supported",
+        "reason": "摘要描述 conditional steering probe 在 mid-stack 写入，且 d 读取残差流；结合 YOPO 目的可理解。"
+      },
+      {
+        "text": "在小模型上，把读取从干净的前向过程移到被 steering 写入方向后的前向过程之后，跨域迁移的 AUROC 会下降，降幅可达 8 个点",
+        "kind": "reported_result",
+        "evidence_ids": [
+          "ev_92016a8e88b8"
+        ],
+        "support": "supported",
+        "reason": "摘要说 one-pass gate loses up to 8 AUROC points of cross-domain transfer。"
+      },
+      {
+        "text": "把答题和拒答硬拼在一条残差流上时，核心障碍不是训练更好的拒答门控，而是 steering 写入破坏了 d 本来要读的那部分状态。",
+        "kind": "inference",
+        "evidence_ids": [
+          "ev_92016a8e88b8"
+        ],
+        "support": "supported",
+        "reason": "摘要明确说“The steering write shifts the residual state that d reads”，支持该推断。"
+      },
+      {
+        "text": "YOPO 的目标是把答题和拒答放进同一次前向",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_ddadf1a966e0"
+        ],
+        "support": "supported",
+        "reason": "excerpt 明确说明 YOPO 在一次前向中同时实现 answering 和 abstaining。"
+      },
+      {
+        "text": "其核心是一个 conditional steering probe：该 probe 既把生成引导向残差流中已经编码的证据，又在输入不充分时写入拒答信号，从而避免多遍前向或基于 head 的拒答",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_ddadf1a966e0"
+        ],
+        "support": "supported",
+        "reason": "excerpt 直接描述了 conditional steering probe 的双重作用及避免多遍前向/基于 head 的拒答。"
+      },
+      {
+        "text": "ITI 针对模型内部知道正确答案但生成时未说出的问题。",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_9f61bf690572"
+        ],
+        "support": "supported",
+        "reason": "论文摘要明确描述了此类问题：模型在某种意义上‘知道’正确答案，但标准生成策略未能引出该回答。"
+      },
+      {
+        "text": "ITI 在推理时沿着少数 attention heads 的一组方向移动模型激活。",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_9f61bf690572"
+        ],
+        "support": "supported",
+        "reason": "论文原文：'ITI operates by shifting model activations during inference, following a set of directions across a limited number of attention heads.'"
+      },
+      {
+        "text": "ITI 是低侵入且计算开销较低的方法。",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_9f61bf690572"
+        ],
+        "support": "supported",
+        "reason": "论文原文：'ITI is minimally invasive and computationally inexpensive.'"
+      },
+      {
+        "text": "在 instruction-finetuned LLaMA（Alpaca）上，ITI 将 TruthfulQA 的真实率从 32.5% 提高到 65.1%。",
+        "kind": "reported_result",
+        "evidence_ids": [
+          "ev_9f61bf690572"
+        ],
+        "support": "supported",
+        "reason": "论文原文：'On an instruction-finetuned LLaMA called Alpaca, ITI improves its truthfulness from 32.5% to 65.1%.'"
+      },
+      {
+        "text": "干预强度可以调节，用于在 truthfulness 与 helpfulness 之间取得平衡。",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_9f61bf690572"
+        ],
+        "support": "supported",
+        "reason": "论文原文：'We identify a trade-off between truthfulness and helpfulness and demonstrate how to balance it by tuning the intervention strength.'"
+      },
+      {
+        "text": "ITI 的数据效率很高，只需要几百个示例定位相关方向。",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_9f61bf690572"
+        ],
+        "support": "supported",
+        "reason": "论文原文：'ITI locates truthful directions using only few hundred examples.'"
+      },
+      {
+        "text": "ITI 的干预只影响选中的少数 attention heads。",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_9f61bf690572"
+        ],
+        "support": "supported",
+        "reason": "论文描述干预为沿着少数 attention heads 移动激活，因此直接影响这些 heads。"
+      },
+      {
+        "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么。",
+        "kind": "fact",
+        "evidence_ids": [],
+        "support": "unsupported",
+        "reason": "该陈述是对论文内容的负面断言，但所提供摘要及引言片段中未直接提及缺乏机制解释，亦无其他证据支持。"
+      },
+      {
+        "text": "ITI 显示“往激活里写方向”是可行的、低成本的；但 ITI 没有进一步处理写入之后如何读另一个方向。",
+        "kind": "inference",
+        "evidence_ids": [],
+        "support": "unsupported",
+        "reason": "这是基于 ITI 方法对 YOPO 的启示性推断，无需直接外部证据。"
+      },
+      {
+        "text": "YOPO 的 steering 与 ITI 类似，都是在中间激活上写方向；区别在于 YOPO 的写入由 conditional steering probe 决定，而 ITI 用固定方向向量。",
+        "kind": "inference",
+        "evidence_ids": [],
+        "support": "unsupported",
+        "reason": "这是对 YOPO 与 ITI 技术差异的对比推断，基于文章上下文，无外部证据直接核实。"
+      },
+      {
+        "text": "ITI 不涉及读取其他方向，因此干扰问题未必会显现；这是 YOPO 试图解决的问题。",
+        "kind": "inference",
+        "evidence_ids": [],
+        "support": "unsupported",
+        "reason": "这是作者对 ITI 局限性和 YOPO 动机的推断性解释，非事实断言。"
+      },
+      {
+        "text": "现有 steering 证据只支持思考模型中的部分推理行为由激活空间中的线性方向介导，并可被 steering vectors 控制",
+        "kind": "reported_result",
+        "evidence_ids": [
+          "ev_8a226fe7a7d2"
+        ],
+        "support": "supported",
+        "reason": "excerpt 明确说明这些行为由激活空间中的线性方向介导并可通过 steering vectors 控制。"
+      }
+    ],
+    "section_audits": {
+      "0": {
+        "claims": [
+          {
+            "text": "答案其实已经写进残差流，生成时却仍然答错",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_92016a8e88b8"
+            ],
+            "support": "partial",
+            "reason": "摘要只说残差流已经编码了证据（evidence），未明确说“答案”本身已写入；但结合上下文可视为同一信息。"
+          },
+          {
+            "text": "输入信息不足时不会说“我不知道”，而是编造一个",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_92016a8e88b8"
+            ],
+            "support": "supported",
+            "reason": "摘要直接说“fails to detect when the input is insufficient to answer, so it confabulates”。"
+          },
+          {
+            "text": "ITI 在 TruthfulQA 上把 Alpaca 的诚实率从 32.5% 提到 65.1%",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_9f61bf690572"
+            ],
+            "support": "supported",
+            "reason": "摘要明确给出该数字。"
+          },
+          {
+            "text": "YOPO 方法里那个零样本学到的信息充分性（sufficiency）方向 d，就是按这个思路读残差流的：用 AUROC 来评估它能否把可答与不可答样本区分开。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_92016a8e88b8"
+            ],
+            "support": "supported",
+            "reason": "摘要提到 zero-shot sufficiency direction d 读取残差流，且使用 AUROC 衡量迁移性能。"
+          },
+          {
+            "text": "YOPO 在网络的中间层（mid-stack）用一个条件式 steering 探针写入答案方向，同时用固定的 d 读取同一条残差流来判断是否拒答。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_92016a8e88b8"
+            ],
+            "support": "supported",
+            "reason": "摘要描述 conditional steering probe 在 mid-stack 写入，且 d 读取残差流；结合 YOPO 目的可理解。"
+          },
+          {
+            "text": "在小模型上，把读取从干净的前向过程移到被 steering 写入方向后的前向过程之后，跨域迁移的 AUROC 会下降，降幅可达 8 个点",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_92016a8e88b8"
+            ],
+            "support": "supported",
+            "reason": "摘要说 one-pass gate loses up to 8 AUROC points of cross-domain transfer。"
+          },
+          {
+            "text": "把答题和拒答硬拼在一条残差流上时，核心障碍不是训练更好的拒答门控，而是 steering 写入破坏了 d 本来要读的那部分状态。",
+            "kind": "inference",
+            "evidence_ids": [
+              "ev_92016a8e88b8"
+            ],
+            "support": "supported",
+            "reason": "摘要明确说“The steering write shifts the residual state that d reads”，支持该推断。"
+          }
+        ]
+      },
+      "1": {
+        "claims": [
+          {
+            "text": "YOPO 的目标是把答题和拒答放进同一次前向",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_ddadf1a966e0"
+            ],
+            "support": "supported",
+            "reason": "excerpt 明确说明 YOPO 在一次前向中同时实现 answering 和 abstaining。"
+          },
+          {
+            "text": "其核心是一个 conditional steering probe：该 probe 既把生成引导向残差流中已经编码的证据，又在输入不充分时写入拒答信号，从而避免多遍前向或基于 head 的拒答",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_ddadf1a966e0"
+            ],
+            "support": "supported",
+            "reason": "excerpt 直接描述了 conditional steering probe 的双重作用及避免多遍前向/基于 head 的拒答。"
+          }
+        ]
+      },
+      "2": {
+        "claims": [
+          {
+            "text": "ITI 针对模型内部知道正确答案但生成时未说出的问题。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_9f61bf690572"
+            ],
+            "support": "supported",
+            "reason": "论文摘要明确描述了此类问题：模型在某种意义上‘知道’正确答案，但标准生成策略未能引出该回答。"
+          },
+          {
+            "text": "ITI 在推理时沿着少数 attention heads 的一组方向移动模型激活。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_9f61bf690572"
+            ],
+            "support": "supported",
+            "reason": "论文原文：'ITI operates by shifting model activations during inference, following a set of directions across a limited number of attention heads.'"
+          },
+          {
+            "text": "ITI 是低侵入且计算开销较低的方法。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_9f61bf690572"
+            ],
+            "support": "supported",
+            "reason": "论文原文：'ITI is minimally invasive and computationally inexpensive.'"
+          },
+          {
+            "text": "在 instruction-finetuned LLaMA（Alpaca）上，ITI 将 TruthfulQA 的真实率从 32.5% 提高到 65.1%。",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_9f61bf690572"
+            ],
+            "support": "supported",
+            "reason": "论文原文：'On an instruction-finetuned LLaMA called Alpaca, ITI improves its truthfulness from 32.5% to 65.1%.'"
+          },
+          {
+            "text": "干预强度可以调节，用于在 truthfulness 与 helpfulness 之间取得平衡。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_9f61bf690572"
+            ],
+            "support": "supported",
+            "reason": "论文原文：'We identify a trade-off between truthfulness and helpfulness and demonstrate how to balance it by tuning the intervention strength.'"
+          },
+          {
+            "text": "ITI 的数据效率很高，只需要几百个示例定位相关方向。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_9f61bf690572"
+            ],
+            "support": "supported",
+            "reason": "论文原文：'ITI locates truthful directions using only few hundred examples.'"
+          },
+          {
+            "text": "ITI 的干预只影响选中的少数 attention heads。",
+            "kind": "fact",
+            "evidence_ids": [
+              "ev_9f61bf690572"
+            ],
+            "support": "supported",
+            "reason": "论文描述干预为沿着少数 attention heads 移动激活，因此直接影响这些 heads。"
+          },
+          {
+            "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么。",
+            "kind": "fact",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "该陈述是对论文内容的负面断言，但所提供摘要及引言片段中未直接提及缺乏机制解释，亦无其他证据支持。"
+          },
+          {
+            "text": "ITI 显示“往激活里写方向”是可行的、低成本的；但 ITI 没有进一步处理写入之后如何读另一个方向。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是基于 ITI 方法对 YOPO 的启示性推断，无需直接外部证据。"
+          },
+          {
+            "text": "YOPO 的 steering 与 ITI 类似，都是在中间激活上写方向；区别在于 YOPO 的写入由 conditional steering probe 决定，而 ITI 用固定方向向量。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是对 YOPO 与 ITI 技术差异的对比推断，基于文章上下文，无外部证据直接核实。"
+          },
+          {
+            "text": "ITI 不涉及读取其他方向，因此干扰问题未必会显现；这是 YOPO 试图解决的问题。",
+            "kind": "inference",
+            "evidence_ids": [],
+            "support": "unsupported",
+            "reason": "这是作者对 ITI 局限性和 YOPO 动机的推断性解释，非事实断言。"
+          }
+        ]
+      },
+      "3": {
+        "claims": [
+          {
+            "text": "现有 steering 证据只支持思考模型中的部分推理行为由激活空间中的线性方向介导，并可被 steering vectors 控制",
+            "kind": "reported_result",
+            "evidence_ids": [
+              "ev_8a226fe7a7d2"
+            ],
+            "support": "supported",
+            "reason": "excerpt 明确说明这些行为由激活空间中的线性方向介导并可通过 steering vectors 控制。"
+          }
+        ]
+      }
+    },
+    "blocking_claims": [
+      {
+        "text": "答案其实已经写进残差流，生成时却仍然答错",
+        "kind": "fact",
+        "evidence_ids": [
+          "ev_92016a8e88b8"
+        ],
+        "support": "partial",
+        "reason": "摘要只说残差流已经编码了证据（evidence），未明确说“答案”本身已写入；但结合上下文可视为同一信息。"
+      },
+      {
+        "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么。",
+        "kind": "fact",
+        "evidence_ids": [],
+        "support": "unsupported",
+        "reason": "该陈述是对论文内容的负面断言，但所提供摘要及引言片段中未直接提及缺乏机制解释，亦无其他证据支持。"
+      }
+    ],
+    "pass": false,
+    "round": 3
+  },
+  "claim_audit_rounds": [
+    {
+      "claims": [
+        {
+          "text": "ITI 在 TruthfulQA 上把 Alpaca 的诚实率从 32.5% 提到 65.1%",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "证据摘要明确提到 'ITI improves its truthfulness from 32.5% to 65.1%'。"
+        },
+        {
+          "text": "YOPO 在网络的中间层用一个条件式 steering 探针写入答案方向，同时用固定的 d 读取同一条残差流来判断是否拒答",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "证据摘要描述 'a conditional steering probe writes the stream at mid-stack layers' 和 'a zero-shot sufficiency direction d reads the stream and abstains when information is insufficient'。"
+        },
+        {
+          "text": "YOPO 的 sufficiency 方向 d 是零样本学到的，用来读取残差流判断信息是否充分",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "证据摘要提到 'zero-shot sufficiency direction d reads the stream and abstains when information is insufficient'。"
+        },
+        {
+          "text": "在小模型上，将读取从干净的前向过程移到被 steering 写入方向后的前向过程后，跨域迁移的 AUROC 下降，降幅可达 8 个点",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "证据摘要提到 'the one-pass gate loses up to 8 AUROC points of cross-domain transfer'。"
+        },
+        {
+          "text": "需要拒答时，模型常常会给一个高置信的错误答案",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "作者基于模型幻嗅行为的分析，属于合理的推断，无需直接证据。"
+        },
+        {
+          "text": "中间残差流里的 sufficiency 方向已经把“信息不足”编码进去了",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "证据摘要表明该方向用于在信息不足时弃权，即已编码不足信息。"
+        },
+        {
+          "text": "把答题和拒答硬拼在一条残差流上时，核心障碍是 steering 写入破坏了 d 本来要读的那部分状态",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "这是作者对实验结果的机制解释，属于正常分析，不构成强断言。"
+        },
+        {
+          "text": "旧方法分开时都有效，但合在一起时共享的表示空间发生冲突：steering 改变了残差流里的隐藏状态分布，导致 d 的投影分数偏移",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "作者基于前述结果进行的因果解释，未虚构机制，未过度外推。"
+        },
+        {
+          "text": "YOPO 的目标是把答题和拒答放进同一次前向；直接读 steered 残差会破坏 d 的读数。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无外部证据支持该方法目标及残差破坏 d 的经验发现。"
+        },
+        {
+          "text": "YOPO 的解法是：不要改 d 的判断标准，而是把被 steering 写过的残差还原成没写过的样子，再在还原结果上读 d。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持这一架构设计的描述。"
+        },
+        {
+          "text": "输入是冻结的 Qwen2.5 backbone（1.5B/3B/7B），在选定的 mid-stack 层取出残差流 h；conditional steering probe 读取 h 并计算写入向量加到残差流上得到 steered 残差 h_s。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持具体 backbone 和 steering 机制。"
+        },
+        {
+          "text": "在完全冻结的 backbone 上，conditional steering probe 恢复了部分溯因准确率。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无实验数据支持该结果。"
+        },
+        {
+          "text": "h_s 被送入小重构网络 f；f 的训练完全无标签，只用 (steered, clean) 残差对和均方误差训练，目标是还原 h_c。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持训练方式和网络目标。"
+        },
+        {
+          "text": "因为训练对里只有“写入前 vs 写入后”的差别，f 学到的就是“undo 这个 steering 写入”，而不是“什么时候该拒答”。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "作者从训练目标和数据构造推出的合理结论，无需直接引用。"
+        },
+        {
+          "text": "f 被 identity 初始化，初始时 f(h_s)=h_s；当 steering 写入没有破坏 d 的读数时，f 会学着什么都不做。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持初始化方式及网络行为。"
+        },
+        {
+          "text": "identity 初始化给 f 一个无操作先验，防止 f 在无干扰时乱动，并解释 7B 上 f 学会什么都不做；同时让训练更稳定。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "作者基于机制正常作出的解释性推断，无需直接引用。"
+        },
+        {
+          "text": "在 f 输出估计 clean 残差 ĥ_c 上，用固定零样本 sufficiency 方向 d 投影读出信息充分性分数；低于阈值拒答，否则输出 steered pass 上的回答。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持该决策流程。"
+        },
+        {
+          "text": "可选地在 ĥ_c 上叠加一个监督 gate 做拒答判断，用于提高 in-domain 分数；监督 gate 能接触 sufficiency 标签，但可能付出 transfer 代价。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持监督 gate 的变体及 trade-off 陈述。"
+        },
+        {
+          "text": "YOPO 改变了前向的中间状态：原本冻结模型只输出 logits，现在需要中途取出 h，写入得到 h_s，再经过 f 得到 ĥ_c，同时产生答案和拒答信号。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持接口/前向流程描述。"
+        },
+        {
+          "text": "标签无关修正没有见过任何 sufficiency 标注，却能在跨域上超过监督 gate。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无实验结果证据。"
+        },
+        {
+          "text": "原因在于 f 的训练目标只是重建残差，学到的变换是局部的、与任务无关的；监督 gate 直接拟合源域拒答标签，容易把源域特有表层特征当成判断依据。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "作者对现象给出的因果解释，属于正常推断。"
+        },
+        {
+          "text": "YOPO 的设计原则是 abstention should not be trained in——拒答不应被训练进网络，而是保留固定的 d 方向。",
+          "kind": "author_judgment",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "设计原则属于作者价值判断/主张，不要求外部证据。"
+        },
+        {
+          "text": "标签无关修正在跨域上优于监督 gate，接近 two-pass ceiling；two-pass ceiling 是额外跑一遍没有 steering 的干净前向、在干净残差上读 d 得到的 gate 质量上限。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无实验证据；two-pass ceiling 定义也是作者框架内陈述。"
+        },
+        {
+          "text": "监督 gate 在 in-domain 上更强，但标签无关修正在跨域上更稳定；端到端三分类准确率有明显提升，并在多个 backbone 上保持优势。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无实验数据支持多 backbone 结果。"
+        },
+        {
+          "text": "更合理的理解是 f 不学习拒答策略，只擦掉 steering 写下的痕迹，跨域稳定性继承自固定的 d。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "作者对机制的解释性总结。"
+        },
+        {
+          "text": "局限：标签无关修正尚未完全恢复到 two-pass ceiling；方法依赖已有的 steering probe 和 d 方向；监督 gate 可能有 transfer 代价；αNLI 构造可能泄漏表层捷径；7B 上可能观察到干扰反转——steered 残差比 clean 残差更利于 d 读出，identity 初始化的校正网络学会什么都不做。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "作者以“可能/尚未”等措辞说明局限，无强断言。"
+        },
+        {
+          "text": "ITI 解决的是另一类问题：模型内部“知道”正确答案，但生成时说出来。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "not_applicable",
+          "reason": "作者对ITI所针对问题类型的概括，属于正常分析，无需直接证据。"
+        },
+        {
+          "text": "ITI 的做法是：在 TruthfulQA 上用线性探针找出稀疏的一组 attention heads，它们的激活能高准确率预测真实性；为每个 head 找出 truth-correlated 方向向量。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "partial",
+          "reason": "excerpt仅提到'shifting model activations...following a set of directions across a limited number of attention heads'，未明确提及线性探针和truth-correlated方向，因此部分支持。"
+        },
+        {
+          "text": "推理时，每算完这些 head 的激活，就把激活沿着方向向量平移一个由干预强度控制的量，再继续后续层计算；每个生成 token 都重复。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "unsupported",
+          "reason": "excerpt未描述具体推理时的平移操作和token循环，因此不支持。"
+        },
+        {
+          "text": "这个过程不更新任何权重，只需要 hook 模型内部。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "unsupported",
+          "reason": "excerpt未提及权重不更新或hook内部，因此不支持。"
+        },
+        {
+          "text": "在 instruction-finetuned LLaMA（Alpaca）上，ITI 把 TruthfulQA 的真实率从 32.5% 提高到 65.1%",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "excerpt明确给出'improves its truthfulness from 32.5% to 65.1%'。"
+        },
+        {
+          "text": "干预强度可以调节，存在 truthfulness 与 helpfulness 的权衡：强度越高，真实率提高，但有用性下降。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "partial",
+          "reason": "excerpt提到'trade-off between truthfulness and helpfulness'和'tuning intervention strength'，但未明确强度与真实率、有用性的具体关系，因此部分支持。"
+        },
+        {
+          "text": "ITI 的数据效率很高，只需要几百个示例定位相关方向",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "excerpt提到'locates truthful directions using only few hundred examples'。"
+        },
+        {
+          "text": "ITI 的干预只影响选中的少数 attention heads",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "excerpt提到'limited number of attention heads'。"
+        },
+        {
+          "text": "在 TruthfulQA 之外的其他基准上提升较小；",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "unsupported",
+          "reason": "excerpt未提及任何其他基准的结果，因此不支持。"
+        },
+        {
+          "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么。",
+          "kind": "author_judgment",
+          "evidence_ids": [],
+          "support": "not_applicable",
+          "reason": "这是作者对论文局限性的主观评价，无需引用。"
+        },
+        {
+          "text": "对 YOPO 来说，ITI 的价值在于证明“往激活里写方向”是可行的、低成本的，但它没有考虑写入之后如何读另一个方向。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "not_applicable",
+          "reason": "作者基于ITI方法的分析，属于正常推断，无强断言。"
+        },
+        {
+          "text": "YOPO 的 steering 与 ITI 类似，都是在中间激活上写方向；区别在于 YOPO 的写入由 conditional steering probe 决定，而 ITI 用固定方向向量。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "not_applicable",
+          "reason": "作者对自身方法与ITI的对比，属于正常分析。"
+        },
+        {
+          "text": "但 ITI 不读任何其他方向，所以没有暴露干扰问题。这正是 YOPO 要解决的问题。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "not_applicable",
+          "reason": "作者基于ITI特性推出的解释，无虚构因果或强断言。"
+        },
+        {
+          "text": "拒答不是一个需要额外分类器、额外训练或第二遍前向的附加功能，而是可以从残差流里几乎免费读出来的固定方向。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是对YOPO结论的转述，但未提供YOPO论文或实验证据，无法核实。"
+        },
+        {
+          "text": "读方向本身较为便宜",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "声称基于现有结果，但未给出任何数据或引用。"
+        },
+        {
+          "text": "steering 写入会改变残差状态，并伴随小模型 AUROC 下降",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是具体的实验观察，但没有证据支持。"
+        },
+        {
+          "text": "可以通过训练一个小网络重建残差来缓解",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "声称该方法是有效的，但没有实验结果或引用。"
+        },
+        {
+          "text": "论文没有给出干扰随容量反转的机制解释",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "关于YOPO论文内容的陈述，但未提供论文原文，无法核实。"
+        },
+        {
+          "text": "跨家族稳定性仍待验证",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "这是作者基于现有研究的合理推断，无强断言。"
+        },
+        {
+          "text": "αNLI 的 early-layer separability 假象提示 answer-or-abstain 基准极易泄漏表层捷径",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "正常分析，无强断言。"
+        },
+        {
+          "text": "问题应该从“怎么训练一个拒答器”转成“同一块残差流上，写答案与读充分性如何和平共处”",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "作者对问题的重新框定，合理。"
+        },
+        {
+          "text": "这些不是新路线，而是 YOPO 边界内的问题。",
+          "kind": "author_judgment",
+          "evidence_ids": [],
+          "support": "supported",
+          "reason": "作者的价值判断，不要求引用。"
+        }
+      ],
+      "section_audits": {
+        "0": {
+          "claims": [
+            {
+              "text": "ITI 在 TruthfulQA 上把 Alpaca 的诚实率从 32.5% 提到 65.1%",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "证据摘要明确提到 'ITI improves its truthfulness from 32.5% to 65.1%'。"
+            },
+            {
+              "text": "YOPO 在网络的中间层用一个条件式 steering 探针写入答案方向，同时用固定的 d 读取同一条残差流来判断是否拒答",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "证据摘要描述 'a conditional steering probe writes the stream at mid-stack layers' 和 'a zero-shot sufficiency direction d reads the stream and abstains when information is insufficient'。"
+            },
+            {
+              "text": "YOPO 的 sufficiency 方向 d 是零样本学到的，用来读取残差流判断信息是否充分",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "证据摘要提到 'zero-shot sufficiency direction d reads the stream and abstains when information is insufficient'。"
+            },
+            {
+              "text": "在小模型上，将读取从干净的前向过程移到被 steering 写入方向后的前向过程后，跨域迁移的 AUROC 下降，降幅可达 8 个点",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "证据摘要提到 'the one-pass gate loses up to 8 AUROC points of cross-domain transfer'。"
+            },
+            {
+              "text": "需要拒答时，模型常常会给一个高置信的错误答案",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "作者基于模型幻嗅行为的分析，属于合理的推断，无需直接证据。"
+            },
+            {
+              "text": "中间残差流里的 sufficiency 方向已经把“信息不足”编码进去了",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "证据摘要表明该方向用于在信息不足时弃权，即已编码不足信息。"
+            },
+            {
+              "text": "把答题和拒答硬拼在一条残差流上时，核心障碍是 steering 写入破坏了 d 本来要读的那部分状态",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "这是作者对实验结果的机制解释，属于正常分析，不构成强断言。"
+            },
+            {
+              "text": "旧方法分开时都有效，但合在一起时共享的表示空间发生冲突：steering 改变了残差流里的隐藏状态分布，导致 d 的投影分数偏移",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "作者基于前述结果进行的因果解释，未虚构机制，未过度外推。"
+            }
+          ]
+        },
+        "1": {
+          "claims": [
+            {
+              "text": "YOPO 的目标是把答题和拒答放进同一次前向；直接读 steered 残差会破坏 d 的读数。",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无外部证据支持该方法目标及残差破坏 d 的经验发现。"
+            },
+            {
+              "text": "YOPO 的解法是：不要改 d 的判断标准，而是把被 steering 写过的残差还原成没写过的样子，再在还原结果上读 d。",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无证据支持这一架构设计的描述。"
+            },
+            {
+              "text": "输入是冻结的 Qwen2.5 backbone（1.5B/3B/7B），在选定的 mid-stack 层取出残差流 h；conditional steering probe 读取 h 并计算写入向量加到残差流上得到 steered 残差 h_s。",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无证据支持具体 backbone 和 steering 机制。"
+            },
+            {
+              "text": "在完全冻结的 backbone 上，conditional steering probe 恢复了部分溯因准确率。",
+              "kind": "reported_result",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无实验数据支持该结果。"
+            },
+            {
+              "text": "h_s 被送入小重构网络 f；f 的训练完全无标签，只用 (steered, clean) 残差对和均方误差训练，目标是还原 h_c。",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无证据支持训练方式和网络目标。"
+            },
+            {
+              "text": "因为训练对里只有“写入前 vs 写入后”的差别，f 学到的就是“undo 这个 steering 写入”，而不是“什么时候该拒答”。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "作者从训练目标和数据构造推出的合理结论，无需直接引用。"
+            },
+            {
+              "text": "f 被 identity 初始化，初始时 f(h_s)=h_s；当 steering 写入没有破坏 d 的读数时，f 会学着什么都不做。",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无证据支持初始化方式及网络行为。"
+            },
+            {
+              "text": "identity 初始化给 f 一个无操作先验，防止 f 在无干扰时乱动，并解释 7B 上 f 学会什么都不做；同时让训练更稳定。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "作者基于机制正常作出的解释性推断，无需直接引用。"
+            },
+            {
+              "text": "在 f 输出估计 clean 残差 ĥ_c 上，用固定零样本 sufficiency 方向 d 投影读出信息充分性分数；低于阈值拒答，否则输出 steered pass 上的回答。",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无证据支持该决策流程。"
+            },
+            {
+              "text": "可选地在 ĥ_c 上叠加一个监督 gate 做拒答判断，用于提高 in-domain 分数；监督 gate 能接触 sufficiency 标签，但可能付出 transfer 代价。",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无证据支持监督 gate 的变体及 trade-off 陈述。"
+            },
+            {
+              "text": "YOPO 改变了前向的中间状态：原本冻结模型只输出 logits，现在需要中途取出 h，写入得到 h_s，再经过 f 得到 ĥ_c，同时产生答案和拒答信号。",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无证据支持接口/前向流程描述。"
+            },
+            {
+              "text": "标签无关修正没有见过任何 sufficiency 标注，却能在跨域上超过监督 gate。",
+              "kind": "reported_result",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无实验结果证据。"
+            },
+            {
+              "text": "原因在于 f 的训练目标只是重建残差，学到的变换是局部的、与任务无关的；监督 gate 直接拟合源域拒答标签，容易把源域特有表层特征当成判断依据。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "作者对现象给出的因果解释，属于正常推断。"
+            },
+            {
+              "text": "YOPO 的设计原则是 abstention should not be trained in——拒答不应被训练进网络，而是保留固定的 d 方向。",
+              "kind": "author_judgment",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "设计原则属于作者价值判断/主张，不要求外部证据。"
+            },
+            {
+              "text": "标签无关修正在跨域上优于监督 gate，接近 two-pass ceiling；two-pass ceiling 是额外跑一遍没有 steering 的干净前向、在干净残差上读 d 得到的 gate 质量上限。",
+              "kind": "reported_result",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无实验证据；two-pass ceiling 定义也是作者框架内陈述。"
+            },
+            {
+              "text": "监督 gate 在 in-domain 上更强，但标签无关修正在跨域上更稳定；端到端三分类准确率有明显提升，并在多个 backbone 上保持优势。",
+              "kind": "reported_result",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "无实验数据支持多 backbone 结果。"
+            },
+            {
+              "text": "更合理的理解是 f 不学习拒答策略，只擦掉 steering 写下的痕迹，跨域稳定性继承自固定的 d。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "作者对机制的解释性总结。"
+            },
+            {
+              "text": "局限：标签无关修正尚未完全恢复到 two-pass ceiling；方法依赖已有的 steering probe 和 d 方向；监督 gate 可能有 transfer 代价；αNLI 构造可能泄漏表层捷径；7B 上可能观察到干扰反转——steered 残差比 clean 残差更利于 d 读出，identity 初始化的校正网络学会什么都不做。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "作者以“可能/尚未”等措辞说明局限，无强断言。"
+            }
+          ]
+        },
+        "2": {
+          "claims": [
+            {
+              "text": "ITI 解决的是另一类问题：模型内部“知道”正确答案，但生成时说出来。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "not_applicable",
+              "reason": "作者对ITI所针对问题类型的概括，属于正常分析，无需直接证据。"
+            },
+            {
+              "text": "ITI 的做法是：在 TruthfulQA 上用线性探针找出稀疏的一组 attention heads，它们的激活能高准确率预测真实性；为每个 head 找出 truth-correlated 方向向量。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "partial",
+              "reason": "excerpt仅提到'shifting model activations...following a set of directions across a limited number of attention heads'，未明确提及线性探针和truth-correlated方向，因此部分支持。"
+            },
+            {
+              "text": "推理时，每算完这些 head 的激活，就把激活沿着方向向量平移一个由干预强度控制的量，再继续后续层计算；每个生成 token 都重复。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "unsupported",
+              "reason": "excerpt未描述具体推理时的平移操作和token循环，因此不支持。"
+            },
+            {
+              "text": "这个过程不更新任何权重，只需要 hook 模型内部。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "unsupported",
+              "reason": "excerpt未提及权重不更新或hook内部，因此不支持。"
+            },
+            {
+              "text": "在 instruction-finetuned LLaMA（Alpaca）上，ITI 把 TruthfulQA 的真实率从 32.5% 提高到 65.1%",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "excerpt明确给出'improves its truthfulness from 32.5% to 65.1%'。"
+            },
+            {
+              "text": "干预强度可以调节，存在 truthfulness 与 helpfulness 的权衡：强度越高，真实率提高，但有用性下降。",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "partial",
+              "reason": "excerpt提到'trade-off between truthfulness and helpfulness'和'tuning intervention strength'，但未明确强度与真实率、有用性的具体关系，因此部分支持。"
+            },
+            {
+              "text": "ITI 的数据效率很高，只需要几百个示例定位相关方向",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "excerpt提到'locates truthful directions using only few hundred examples'。"
+            },
+            {
+              "text": "ITI 的干预只影响选中的少数 attention heads",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "excerpt提到'limited number of attention heads'。"
+            },
+            {
+              "text": "在 TruthfulQA 之外的其他基准上提升较小；",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "unsupported",
+              "reason": "excerpt未提及任何其他基准的结果，因此不支持。"
+            },
+            {
+              "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么。",
+              "kind": "author_judgment",
+              "evidence_ids": [],
+              "support": "not_applicable",
+              "reason": "这是作者对论文局限性的主观评价，无需引用。"
+            },
+            {
+              "text": "对 YOPO 来说，ITI 的价值在于证明“往激活里写方向”是可行的、低成本的，但它没有考虑写入之后如何读另一个方向。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "not_applicable",
+              "reason": "作者基于ITI方法的分析，属于正常推断，无强断言。"
+            },
+            {
+              "text": "YOPO 的 steering 与 ITI 类似，都是在中间激活上写方向；区别在于 YOPO 的写入由 conditional steering probe 决定，而 ITI 用固定方向向量。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "not_applicable",
+              "reason": "作者对自身方法与ITI的对比，属于正常分析。"
+            },
+            {
+              "text": "但 ITI 不读任何其他方向，所以没有暴露干扰问题。这正是 YOPO 要解决的问题。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "not_applicable",
+              "reason": "作者基于ITI特性推出的解释，无虚构因果或强断言。"
+            }
+          ]
+        },
+        "3": {
+          "claims": [
+            {
+              "text": "拒答不是一个需要额外分类器、额外训练或第二遍前向的附加功能，而是可以从残差流里几乎免费读出来的固定方向。",
+              "kind": "reported_result",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "这是对YOPO结论的转述，但未提供YOPO论文或实验证据，无法核实。"
+            },
+            {
+              "text": "读方向本身较为便宜",
+              "kind": "reported_result",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "声称基于现有结果，但未给出任何数据或引用。"
+            },
+            {
+              "text": "steering 写入会改变残差状态，并伴随小模型 AUROC 下降",
+              "kind": "reported_result",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "这是具体的实验观察，但没有证据支持。"
+            },
+            {
+              "text": "可以通过训练一个小网络重建残差来缓解",
+              "kind": "reported_result",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "声称该方法是有效的，但没有实验结果或引用。"
+            },
+            {
+              "text": "论文没有给出干扰随容量反转的机制解释",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "关于YOPO论文内容的陈述，但未提供论文原文，无法核实。"
+            },
+            {
+              "text": "跨家族稳定性仍待验证",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "这是作者基于现有研究的合理推断，无强断言。"
+            },
+            {
+              "text": "αNLI 的 early-layer separability 假象提示 answer-or-abstain 基准极易泄漏表层捷径",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "正常分析，无强断言。"
+            },
+            {
+              "text": "问题应该从“怎么训练一个拒答器”转成“同一块残差流上，写答案与读充分性如何和平共处”",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "作者对问题的重新框定，合理。"
+            },
+            {
+              "text": "这些不是新路线，而是 YOPO 边界内的问题。",
+              "kind": "author_judgment",
+              "evidence_ids": [],
+              "support": "supported",
+              "reason": "作者的价值判断，不要求引用。"
+            }
+          ]
+        }
+      },
+      "blocking_claims": [
+        {
+          "text": "YOPO 的目标是把答题和拒答放进同一次前向；直接读 steered 残差会破坏 d 的读数。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无外部证据支持该方法目标及残差破坏 d 的经验发现。"
+        },
+        {
+          "text": "YOPO 的解法是：不要改 d 的判断标准，而是把被 steering 写过的残差还原成没写过的样子，再在还原结果上读 d。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持这一架构设计的描述。"
+        },
+        {
+          "text": "输入是冻结的 Qwen2.5 backbone（1.5B/3B/7B），在选定的 mid-stack 层取出残差流 h；conditional steering probe 读取 h 并计算写入向量加到残差流上得到 steered 残差 h_s。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持具体 backbone 和 steering 机制。"
+        },
+        {
+          "text": "在完全冻结的 backbone 上，conditional steering probe 恢复了部分溯因准确率。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无实验数据支持该结果。"
+        },
+        {
+          "text": "h_s 被送入小重构网络 f；f 的训练完全无标签，只用 (steered, clean) 残差对和均方误差训练，目标是还原 h_c。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持训练方式和网络目标。"
+        },
+        {
+          "text": "f 被 identity 初始化，初始时 f(h_s)=h_s；当 steering 写入没有破坏 d 的读数时，f 会学着什么都不做。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持初始化方式及网络行为。"
+        },
+        {
+          "text": "在 f 输出估计 clean 残差 ĥ_c 上，用固定零样本 sufficiency 方向 d 投影读出信息充分性分数；低于阈值拒答，否则输出 steered pass 上的回答。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持该决策流程。"
+        },
+        {
+          "text": "可选地在 ĥ_c 上叠加一个监督 gate 做拒答判断，用于提高 in-domain 分数；监督 gate 能接触 sufficiency 标签，但可能付出 transfer 代价。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持监督 gate 的变体及 trade-off 陈述。"
+        },
+        {
+          "text": "YOPO 改变了前向的中间状态：原本冻结模型只输出 logits，现在需要中途取出 h，写入得到 h_s，再经过 f 得到 ĥ_c，同时产生答案和拒答信号。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无证据支持接口/前向流程描述。"
+        },
+        {
+          "text": "标签无关修正没有见过任何 sufficiency 标注，却能在跨域上超过监督 gate。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无实验结果证据。"
+        },
+        {
+          "text": "标签无关修正在跨域上优于监督 gate，接近 two-pass ceiling；two-pass ceiling 是额外跑一遍没有 steering 的干净前向、在干净残差上读 d 得到的 gate 质量上限。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无实验证据；two-pass ceiling 定义也是作者框架内陈述。"
+        },
+        {
+          "text": "监督 gate 在 in-domain 上更强，但标签无关修正在跨域上更稳定；端到端三分类准确率有明显提升，并在多个 backbone 上保持优势。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "无实验数据支持多 backbone 结果。"
+        },
+        {
+          "text": "ITI 的做法是：在 TruthfulQA 上用线性探针找出稀疏的一组 attention heads，它们的激活能高准确率预测真实性；为每个 head 找出 truth-correlated 方向向量。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "partial",
+          "reason": "excerpt仅提到'shifting model activations...following a set of directions across a limited number of attention heads'，未明确提及线性探针和truth-correlated方向，因此部分支持。"
+        },
+        {
+          "text": "推理时，每算完这些 head 的激活，就把激活沿着方向向量平移一个由干预强度控制的量，再继续后续层计算；每个生成 token 都重复。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "unsupported",
+          "reason": "excerpt未描述具体推理时的平移操作和token循环，因此不支持。"
+        },
+        {
+          "text": "这个过程不更新任何权重，只需要 hook 模型内部。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "unsupported",
+          "reason": "excerpt未提及权重不更新或hook内部，因此不支持。"
+        },
+        {
+          "text": "干预强度可以调节，存在 truthfulness 与 helpfulness 的权衡：强度越高，真实率提高，但有用性下降。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "partial",
+          "reason": "excerpt提到'trade-off between truthfulness and helpfulness'和'tuning intervention strength'，但未明确强度与真实率、有用性的具体关系，因此部分支持。"
+        },
+        {
+          "text": "在 TruthfulQA 之外的其他基准上提升较小；",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "unsupported",
+          "reason": "excerpt未提及任何其他基准的结果，因此不支持。"
+        },
+        {
+          "text": "对 YOPO 来说，ITI 的价值在于证明“往激活里写方向”是可行的、低成本的，但它没有考虑写入之后如何读另一个方向。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "overstated_inference",
+          "reason": "推断语气强于证据"
+        },
+        {
+          "text": "但 ITI 不读任何其他方向，所以没有暴露干扰问题。这正是 YOPO 要解决的问题。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "overstated_inference",
+          "reason": "推断语气强于证据"
+        },
+        {
+          "text": "拒答不是一个需要额外分类器、额外训练或第二遍前向的附加功能，而是可以从残差流里几乎免费读出来的固定方向。",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是对YOPO结论的转述，但未提供YOPO论文或实验证据，无法核实。"
+        },
+        {
+          "text": "读方向本身较为便宜",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "声称基于现有结果，但未给出任何数据或引用。"
+        },
+        {
+          "text": "steering 写入会改变残差状态，并伴随小模型 AUROC 下降",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是具体的实验观察，但没有证据支持。"
+        },
+        {
+          "text": "可以通过训练一个小网络重建残差来缓解",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "声称该方法是有效的，但没有实验结果或引用。"
+        },
+        {
+          "text": "论文没有给出干扰随容量反转的机制解释",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "关于YOPO论文内容的陈述，但未提供论文原文，无法核实。"
+        }
+      ],
+      "pass": false,
+      "round": 1
+    },
+    {
+      "claims": [
+        {
+          "text": "大语言模型在任务上有两个耦合的毛病：答案其实已经写进残差流，生成时却仍然答错；输入信息不足时不会说“我不知道”，而是编造一个。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "YOPO 摘要明确描述 frozen language model 的两个弱点：under-uses evidence that its own residual stream already encodes 和 fails to detect when the input is insufficient to answer, so it confabulates。"
+        },
+        {
+          "text": "代表性工作 ITI 在 TruthfulQA 上把 Alpaca 的诚实率从 32.5% 提到 65.1%。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "ITI 摘要原文：On an instruction-finetuned LLaMA called Alpaca, ITI improves its truthfulness from 32.5% to 65.1%。"
+        },
+        {
+          "text": "YOPO 方法里那个零样本学到的信息充分性方向 d，就是按这个思路读残差流的：用留出集上的选择性 AUROC（sel-AUROC）来评估它能否把可答与不可答样本区分开。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "partial",
+          "reason": "摘要支持 zero-shot sufficiency direction d 读取残差流并用于拒答，也提到 AUROC，但未明确出现 'sel-AUROC' 和 '留出集' 的具体名称。"
+        },
+        {
+          "text": "YOPO 在网络的中间层用一个条件式 steering 探针写入答案方向，同时用固定的 d 读取同一条残差流来判断是否拒答。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "摘要原文：a conditional steering probe writes the stream at mid-stack layers, and a zero-shot sufficiency direction d reads the stream and abstains when information is insufficient。"
+        },
+        {
+          "text": "在小模型上，把读取从干净的前向过程移到被 steering 写入方向后的前向过程之后，跨域迁移的 AUROC 会下降，降幅可达 8 个点。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "摘要原文：on small models the one-pass gate loses up to 8 AUROC points of cross-domain transfer。"
+        },
+        {
+          "text": "YOPO 的目标是把答题和拒答放进同一次前向",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_ddadf1a966e0"
+          ],
+          "support": "supported",
+          "reason": "证据中明确说明避免多遍前向，即同一次前向完成答题与拒答。"
+        },
+        {
+          "text": "其核心是一个 conditional steering probe：该 probe 既把生成引导向残差流中已经编码的证据，又在输入不充分时写入拒答信号，从而避免多遍前向或基于 head 的拒答",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_ddadf1a966e0"
+          ],
+          "support": "supported",
+          "reason": "该句与证据摘录几乎逐字对应，完整陈述了probe的功能与目的。"
+        },
+        {
+          "text": "ITI 在推理时沿着少数 attention heads 的一组方向移动模型激活",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "摘要原句 'ITI operates by shifting model activations during inference, following a set of directions across a limited number of attention heads.'"
+        },
+        {
+          "text": "ITI 是低侵入且计算开销较低的方法",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "摘要原句 'ITI is minimally invasive and computationally inexpensive.'"
+        },
+        {
+          "text": "在 instruction-finetuned LLaMA（Alpaca）上，ITI 把 TruthfulQA 的真实率从 32.5% 提高到 65.1%",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "摘要原句 'On an instruction-finetuned LLaMA called Alpaca, ITI improves its truthfulness from 32.5% to 65.1%.'"
+        },
+        {
+          "text": "干预强度可以调节，用于在 truthfulness 与 helpfulness 之间取得平衡",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "摘要原句 'We identify a trade-off between truthfulness and helpfulness and demonstrate how to balance it by tuning the intervention strength.'"
+        },
+        {
+          "text": "ITI 的数据效率很高，只需要几百个示例定位相关方向",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "摘要原句 'ITI locates truthful directions using only few hundred examples.'"
+        },
+        {
+          "text": "ITI 的干预只影响选中的少数 attention heads",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "摘要中 'following a set of directions across a limited number of attention heads' 明确说明干预限于少数注意力头。"
+        },
+        {
+          "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "not_applicable",
+          "reason": "作者基于对论文的整体阅读得出的判断，无需直接证据；但'论文也没有'这一断言需要全文才能完全核实，此处作为推断列出。"
+        },
+        {
+          "text": "现有 steering 证据只支持思考模型中的部分推理行为由激活空间中的线性方向介导，并可被 steering vectors 控制",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_8a226fe7a7d2"
+          ],
+          "support": "supported",
+          "reason": "excerpt 明确说明这些推理行为由线性方向介导，并可用 steering vectors 控制，与文章陈述一致。"
+        },
+        {
+          "text": "αNLI 的 early-layer separability 假象",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "文章未提供证据来源，无法核实该观察是否存在或是否被 YOPO 报告。"
+        }
+      ],
+      "section_audits": {
+        "0": {
+          "claims": [
+            {
+              "text": "大语言模型在任务上有两个耦合的毛病：答案其实已经写进残差流，生成时却仍然答错；输入信息不足时不会说“我不知道”，而是编造一个。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "YOPO 摘要明确描述 frozen language model 的两个弱点：under-uses evidence that its own residual stream already encodes 和 fails to detect when the input is insufficient to answer, so it confabulates。"
+            },
+            {
+              "text": "代表性工作 ITI 在 TruthfulQA 上把 Alpaca 的诚实率从 32.5% 提到 65.1%。",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "ITI 摘要原文：On an instruction-finetuned LLaMA called Alpaca, ITI improves its truthfulness from 32.5% to 65.1%。"
+            },
+            {
+              "text": "YOPO 方法里那个零样本学到的信息充分性方向 d，就是按这个思路读残差流的：用留出集上的选择性 AUROC（sel-AUROC）来评估它能否把可答与不可答样本区分开。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "partial",
+              "reason": "摘要支持 zero-shot sufficiency direction d 读取残差流并用于拒答，也提到 AUROC，但未明确出现 'sel-AUROC' 和 '留出集' 的具体名称。"
+            },
+            {
+              "text": "YOPO 在网络的中间层用一个条件式 steering 探针写入答案方向，同时用固定的 d 读取同一条残差流来判断是否拒答。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "摘要原文：a conditional steering probe writes the stream at mid-stack layers, and a zero-shot sufficiency direction d reads the stream and abstains when information is insufficient。"
+            },
+            {
+              "text": "在小模型上，把读取从干净的前向过程移到被 steering 写入方向后的前向过程之后，跨域迁移的 AUROC 会下降，降幅可达 8 个点。",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "摘要原文：on small models the one-pass gate loses up to 8 AUROC points of cross-domain transfer。"
+            }
+          ]
+        },
+        "1": {
+          "claims": [
+            {
+              "text": "YOPO 的目标是把答题和拒答放进同一次前向",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_ddadf1a966e0"
+              ],
+              "support": "supported",
+              "reason": "证据中明确说明避免多遍前向，即同一次前向完成答题与拒答。"
+            },
+            {
+              "text": "其核心是一个 conditional steering probe：该 probe 既把生成引导向残差流中已经编码的证据，又在输入不充分时写入拒答信号，从而避免多遍前向或基于 head 的拒答",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_ddadf1a966e0"
+              ],
+              "support": "supported",
+              "reason": "该句与证据摘录几乎逐字对应，完整陈述了probe的功能与目的。"
+            }
+          ]
+        },
+        "2": {
+          "claims": [
+            {
+              "text": "ITI 在推理时沿着少数 attention heads 的一组方向移动模型激活",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "摘要原句 'ITI operates by shifting model activations during inference, following a set of directions across a limited number of attention heads.'"
+            },
+            {
+              "text": "ITI 是低侵入且计算开销较低的方法",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "摘要原句 'ITI is minimally invasive and computationally inexpensive.'"
+            },
+            {
+              "text": "在 instruction-finetuned LLaMA（Alpaca）上，ITI 把 TruthfulQA 的真实率从 32.5% 提高到 65.1%",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "摘要原句 'On an instruction-finetuned LLaMA called Alpaca, ITI improves its truthfulness from 32.5% to 65.1%.'"
+            },
+            {
+              "text": "干预强度可以调节，用于在 truthfulness 与 helpfulness 之间取得平衡",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "摘要原句 'We identify a trade-off between truthfulness and helpfulness and demonstrate how to balance it by tuning the intervention strength.'"
+            },
+            {
+              "text": "ITI 的数据效率很高，只需要几百个示例定位相关方向",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "摘要原句 'ITI locates truthful directions using only few hundred examples.'"
+            },
+            {
+              "text": "ITI 的干预只影响选中的少数 attention heads",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "摘要中 'following a set of directions across a limited number of attention heads' 明确说明干预限于少数注意力头。"
+            },
+            {
+              "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "not_applicable",
+              "reason": "作者基于对论文的整体阅读得出的判断，无需直接证据；但'论文也没有'这一断言需要全文才能完全核实，此处作为推断列出。"
+            }
+          ]
+        },
+        "3": {
+          "claims": [
+            {
+              "text": "现有 steering 证据只支持思考模型中的部分推理行为由激活空间中的线性方向介导，并可被 steering vectors 控制",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_8a226fe7a7d2"
+              ],
+              "support": "supported",
+              "reason": "excerpt 明确说明这些推理行为由线性方向介导，并可用 steering vectors 控制，与文章陈述一致。"
+            },
+            {
+              "text": "αNLI 的 early-layer separability 假象",
+              "kind": "reported_result",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "文章未提供证据来源，无法核实该观察是否存在或是否被 YOPO 报告。"
+            }
+          ]
+        }
+      },
+      "blocking_claims": [
+        {
+          "text": "YOPO 方法里那个零样本学到的信息充分性方向 d，就是按这个思路读残差流的：用留出集上的选择性 AUROC（sel-AUROC）来评估它能否把可答与不可答样本区分开。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "partial",
+          "reason": "摘要支持 zero-shot sufficiency direction d 读取残差流并用于拒答，也提到 AUROC，但未明确出现 'sel-AUROC' 和 '留出集' 的具体名称。"
+        },
+        {
+          "text": "αNLI 的 early-layer separability 假象",
+          "kind": "reported_result",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "文章未提供证据来源，无法核实该观察是否存在或是否被 YOPO 报告。"
+        }
+      ],
+      "pass": false,
+      "round": 2
+    },
+    {
+      "claims": [
+        {
+          "text": "答案其实已经写进残差流，生成时却仍然答错",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "partial",
+          "reason": "摘要只说残差流已经编码了证据（evidence），未明确说“答案”本身已写入；但结合上下文可视为同一信息。"
+        },
+        {
+          "text": "输入信息不足时不会说“我不知道”，而是编造一个",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "摘要直接说“fails to detect when the input is insufficient to answer, so it confabulates”。"
+        },
+        {
+          "text": "ITI 在 TruthfulQA 上把 Alpaca 的诚实率从 32.5% 提到 65.1%",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "摘要明确给出该数字。"
+        },
+        {
+          "text": "YOPO 方法里那个零样本学到的信息充分性（sufficiency）方向 d，就是按这个思路读残差流的：用 AUROC 来评估它能否把可答与不可答样本区分开。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "摘要提到 zero-shot sufficiency direction d 读取残差流，且使用 AUROC 衡量迁移性能。"
+        },
+        {
+          "text": "YOPO 在网络的中间层（mid-stack）用一个条件式 steering 探针写入答案方向，同时用固定的 d 读取同一条残差流来判断是否拒答。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "摘要描述 conditional steering probe 在 mid-stack 写入，且 d 读取残差流；结合 YOPO 目的可理解。"
+        },
+        {
+          "text": "在小模型上，把读取从干净的前向过程移到被 steering 写入方向后的前向过程之后，跨域迁移的 AUROC 会下降，降幅可达 8 个点",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "摘要说 one-pass gate loses up to 8 AUROC points of cross-domain transfer。"
+        },
+        {
+          "text": "把答题和拒答硬拼在一条残差流上时，核心障碍不是训练更好的拒答门控，而是 steering 写入破坏了 d 本来要读的那部分状态。",
+          "kind": "inference",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "supported",
+          "reason": "摘要明确说“The steering write shifts the residual state that d reads”，支持该推断。"
+        },
+        {
+          "text": "YOPO 的目标是把答题和拒答放进同一次前向",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_ddadf1a966e0"
+          ],
+          "support": "supported",
+          "reason": "excerpt 明确说明 YOPO 在一次前向中同时实现 answering 和 abstaining。"
+        },
+        {
+          "text": "其核心是一个 conditional steering probe：该 probe 既把生成引导向残差流中已经编码的证据，又在输入不充分时写入拒答信号，从而避免多遍前向或基于 head 的拒答",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_ddadf1a966e0"
+          ],
+          "support": "supported",
+          "reason": "excerpt 直接描述了 conditional steering probe 的双重作用及避免多遍前向/基于 head 的拒答。"
+        },
+        {
+          "text": "ITI 针对模型内部知道正确答案但生成时未说出的问题。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "论文摘要明确描述了此类问题：模型在某种意义上‘知道’正确答案，但标准生成策略未能引出该回答。"
+        },
+        {
+          "text": "ITI 在推理时沿着少数 attention heads 的一组方向移动模型激活。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "论文原文：'ITI operates by shifting model activations during inference, following a set of directions across a limited number of attention heads.'"
+        },
+        {
+          "text": "ITI 是低侵入且计算开销较低的方法。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "论文原文：'ITI is minimally invasive and computationally inexpensive.'"
+        },
+        {
+          "text": "在 instruction-finetuned LLaMA（Alpaca）上，ITI 将 TruthfulQA 的真实率从 32.5% 提高到 65.1%。",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "论文原文：'On an instruction-finetuned LLaMA called Alpaca, ITI improves its truthfulness from 32.5% to 65.1%.'"
+        },
+        {
+          "text": "干预强度可以调节，用于在 truthfulness 与 helpfulness 之间取得平衡。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "论文原文：'We identify a trade-off between truthfulness and helpfulness and demonstrate how to balance it by tuning the intervention strength.'"
+        },
+        {
+          "text": "ITI 的数据效率很高，只需要几百个示例定位相关方向。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "论文原文：'ITI locates truthful directions using only few hundred examples.'"
+        },
+        {
+          "text": "ITI 的干预只影响选中的少数 attention heads。",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_9f61bf690572"
+          ],
+          "support": "supported",
+          "reason": "论文描述干预为沿着少数 attention heads 移动激活，因此直接影响这些 heads。"
+        },
+        {
+          "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "该陈述是对论文内容的负面断言，但所提供摘要及引言片段中未直接提及缺乏机制解释，亦无其他证据支持。"
+        },
+        {
+          "text": "ITI 显示“往激活里写方向”是可行的、低成本的；但 ITI 没有进一步处理写入之后如何读另一个方向。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是基于 ITI 方法对 YOPO 的启示性推断，无需直接外部证据。"
+        },
+        {
+          "text": "YOPO 的 steering 与 ITI 类似，都是在中间激活上写方向；区别在于 YOPO 的写入由 conditional steering probe 决定，而 ITI 用固定方向向量。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是对 YOPO 与 ITI 技术差异的对比推断，基于文章上下文，无外部证据直接核实。"
+        },
+        {
+          "text": "ITI 不涉及读取其他方向，因此干扰问题未必会显现；这是 YOPO 试图解决的问题。",
+          "kind": "inference",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "这是作者对 ITI 局限性和 YOPO 动机的推断性解释，非事实断言。"
+        },
+        {
+          "text": "现有 steering 证据只支持思考模型中的部分推理行为由激活空间中的线性方向介导，并可被 steering vectors 控制",
+          "kind": "reported_result",
+          "evidence_ids": [
+            "ev_8a226fe7a7d2"
+          ],
+          "support": "supported",
+          "reason": "excerpt 明确说明这些行为由激活空间中的线性方向介导并可通过 steering vectors 控制。"
+        }
+      ],
+      "section_audits": {
+        "0": {
+          "claims": [
+            {
+              "text": "答案其实已经写进残差流，生成时却仍然答错",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "partial",
+              "reason": "摘要只说残差流已经编码了证据（evidence），未明确说“答案”本身已写入；但结合上下文可视为同一信息。"
+            },
+            {
+              "text": "输入信息不足时不会说“我不知道”，而是编造一个",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "摘要直接说“fails to detect when the input is insufficient to answer, so it confabulates”。"
+            },
+            {
+              "text": "ITI 在 TruthfulQA 上把 Alpaca 的诚实率从 32.5% 提到 65.1%",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "摘要明确给出该数字。"
+            },
+            {
+              "text": "YOPO 方法里那个零样本学到的信息充分性（sufficiency）方向 d，就是按这个思路读残差流的：用 AUROC 来评估它能否把可答与不可答样本区分开。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "摘要提到 zero-shot sufficiency direction d 读取残差流，且使用 AUROC 衡量迁移性能。"
+            },
+            {
+              "text": "YOPO 在网络的中间层（mid-stack）用一个条件式 steering 探针写入答案方向，同时用固定的 d 读取同一条残差流来判断是否拒答。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "摘要描述 conditional steering probe 在 mid-stack 写入，且 d 读取残差流；结合 YOPO 目的可理解。"
+            },
+            {
+              "text": "在小模型上，把读取从干净的前向过程移到被 steering 写入方向后的前向过程之后，跨域迁移的 AUROC 会下降，降幅可达 8 个点",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "摘要说 one-pass gate loses up to 8 AUROC points of cross-domain transfer。"
+            },
+            {
+              "text": "把答题和拒答硬拼在一条残差流上时，核心障碍不是训练更好的拒答门控，而是 steering 写入破坏了 d 本来要读的那部分状态。",
+              "kind": "inference",
+              "evidence_ids": [
+                "ev_92016a8e88b8"
+              ],
+              "support": "supported",
+              "reason": "摘要明确说“The steering write shifts the residual state that d reads”，支持该推断。"
+            }
+          ]
+        },
+        "1": {
+          "claims": [
+            {
+              "text": "YOPO 的目标是把答题和拒答放进同一次前向",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_ddadf1a966e0"
+              ],
+              "support": "supported",
+              "reason": "excerpt 明确说明 YOPO 在一次前向中同时实现 answering 和 abstaining。"
+            },
+            {
+              "text": "其核心是一个 conditional steering probe：该 probe 既把生成引导向残差流中已经编码的证据，又在输入不充分时写入拒答信号，从而避免多遍前向或基于 head 的拒答",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_ddadf1a966e0"
+              ],
+              "support": "supported",
+              "reason": "excerpt 直接描述了 conditional steering probe 的双重作用及避免多遍前向/基于 head 的拒答。"
+            }
+          ]
+        },
+        "2": {
+          "claims": [
+            {
+              "text": "ITI 针对模型内部知道正确答案但生成时未说出的问题。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "论文摘要明确描述了此类问题：模型在某种意义上‘知道’正确答案，但标准生成策略未能引出该回答。"
+            },
+            {
+              "text": "ITI 在推理时沿着少数 attention heads 的一组方向移动模型激活。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "论文原文：'ITI operates by shifting model activations during inference, following a set of directions across a limited number of attention heads.'"
+            },
+            {
+              "text": "ITI 是低侵入且计算开销较低的方法。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "论文原文：'ITI is minimally invasive and computationally inexpensive.'"
+            },
+            {
+              "text": "在 instruction-finetuned LLaMA（Alpaca）上，ITI 将 TruthfulQA 的真实率从 32.5% 提高到 65.1%。",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "论文原文：'On an instruction-finetuned LLaMA called Alpaca, ITI improves its truthfulness from 32.5% to 65.1%.'"
+            },
+            {
+              "text": "干预强度可以调节，用于在 truthfulness 与 helpfulness 之间取得平衡。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "论文原文：'We identify a trade-off between truthfulness and helpfulness and demonstrate how to balance it by tuning the intervention strength.'"
+            },
+            {
+              "text": "ITI 的数据效率很高，只需要几百个示例定位相关方向。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "论文原文：'ITI locates truthful directions using only few hundred examples.'"
+            },
+            {
+              "text": "ITI 的干预只影响选中的少数 attention heads。",
+              "kind": "fact",
+              "evidence_ids": [
+                "ev_9f61bf690572"
+              ],
+              "support": "supported",
+              "reason": "论文描述干预为沿着少数 attention heads 移动激活，因此直接影响这些 heads。"
+            },
+            {
+              "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么。",
+              "kind": "fact",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "该陈述是对论文内容的负面断言，但所提供摘要及引言片段中未直接提及缺乏机制解释，亦无其他证据支持。"
+            },
+            {
+              "text": "ITI 显示“往激活里写方向”是可行的、低成本的；但 ITI 没有进一步处理写入之后如何读另一个方向。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "这是基于 ITI 方法对 YOPO 的启示性推断，无需直接外部证据。"
+            },
+            {
+              "text": "YOPO 的 steering 与 ITI 类似，都是在中间激活上写方向；区别在于 YOPO 的写入由 conditional steering probe 决定，而 ITI 用固定方向向量。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "这是对 YOPO 与 ITI 技术差异的对比推断，基于文章上下文，无外部证据直接核实。"
+            },
+            {
+              "text": "ITI 不涉及读取其他方向，因此干扰问题未必会显现；这是 YOPO 试图解决的问题。",
+              "kind": "inference",
+              "evidence_ids": [],
+              "support": "unsupported",
+              "reason": "这是作者对 ITI 局限性和 YOPO 动机的推断性解释，非事实断言。"
+            }
+          ]
+        },
+        "3": {
+          "claims": [
+            {
+              "text": "现有 steering 证据只支持思考模型中的部分推理行为由激活空间中的线性方向介导，并可被 steering vectors 控制",
+              "kind": "reported_result",
+              "evidence_ids": [
+                "ev_8a226fe7a7d2"
+              ],
+              "support": "supported",
+              "reason": "excerpt 明确说明这些行为由激活空间中的线性方向介导并可通过 steering vectors 控制。"
+            }
+          ]
+        }
+      },
+      "blocking_claims": [
+        {
+          "text": "答案其实已经写进残差流，生成时却仍然答错",
+          "kind": "fact",
+          "evidence_ids": [
+            "ev_92016a8e88b8"
+          ],
+          "support": "partial",
+          "reason": "摘要只说残差流已经编码了证据（evidence），未明确说“答案”本身已写入；但结合上下文可视为同一信息。"
+        },
+        {
+          "text": "论文也没有给出机制解释，不知道方向向量在表示里做了什么。",
+          "kind": "fact",
+          "evidence_ids": [],
+          "support": "unsupported",
+          "reason": "该陈述是对论文内容的负面断言，但所提供摘要及引言片段中未直接提及缺乏机制解释，亦无其他证据支持。"
+        }
+      ],
+      "pass": false,
+      "round": 3
+    }
+  ],
+  "claim_audit_complete": false
+}

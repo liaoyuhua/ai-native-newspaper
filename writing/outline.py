@@ -29,6 +29,8 @@ OUTLINE_SYSTEM_PROMPT = """\
    每节声明 introduces / assumes / reader_questions_answered；专业概念必须先解释、后使用。
 6. method_role=primary_subject 的机制卡是本文主角，必须拥有独立机制节；背景卡只能服务于解释主角，不能反客为主。
 7. 标题、副标题和 thesis 使用直接技术语言。全文最多一个比喻；禁止“只剩、证明、必然、彻底取代”等超出证据的绝对结论。
+8. 遵循中文技术社区习惯，不机械翻译产品名和工程对象。产品语境中的 Skills 保留英文；
+   agent、prompt、token 等可自然保留英文。不要为了显得专业而堆英文，也不要追求中文纯度。
 
 只返回 JSON：
 {

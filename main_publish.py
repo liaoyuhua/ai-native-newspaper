@@ -1,6 +1,6 @@
 """
 工作流 B：人工审核提案后触发。
-读取提案 -> 深度研究 -> 机制卡助写 -> 短深文撰写/核查 -> 发布；素材不足则跳过发文。
+读取提案 -> 研究助理整理证据 -> 主编写作 -> 事实编辑核查 -> 发布；素材不足则跳过发文。
 """
 
 from __future__ import annotations
@@ -28,7 +28,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--week-id", default=None, help="对应 data/proposals/<week_id>.json，默认用当前周")
     parser.add_argument("--resume-research", action="store_true", help="复用已落盘研究档案，只重跑写作与发布")
-    parser.add_argument("--resume-draft", action="store_true", help="复用已完成逐节核查的 draft，只重跑文章终审")
+    parser.add_argument(
+        "--resume-draft",
+        action="store_true",
+        help="复用已保存的主编初稿，只重跑事实编辑和必要的主编修订",
+    )
     args = parser.parse_args()
 
     week_id = args.week_id or current_week_id()
@@ -129,7 +133,7 @@ def main() -> None:
         manifest.write(config.RUNS_DIR / f"{week_id}-publish.json")
         return
 
-    logger.info("开始撰写短深文与事实核查 ...")
+    logger.info("开始主编写作、事实编辑与发布检查 ...")
     try:
         draft_path = config.ARTICLES_DATA_DIR / f"{week_id}.draft.json"
         article = compose_article(

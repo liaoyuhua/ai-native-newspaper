@@ -1,21 +1,332 @@
 {
   "week_id": "2026-W34",
-  "topic_name": "Can alignment be baked into a model from token zero via synthetic personas, and what does that change about post-training?",
-  "reason": "article_depth_contract_failed",
-  "quality_report": {
-    "depth_contract": {
-      "pass": false,
-      "issues": [
-        "正文仅 1940 字，低于 2200 字深度下限",
-        "机制内容占比 35.2%，低于 45%",
-        "主角机制仅 392 字，低于 650 字"
+  "topic_name": "Can persistent agent memory failures be localized to a specific pipeline stage?",
+  "reason": "可用机制卡不足，跳过发布以避免空心/成绩单式文章",
+  "mechanism_cards": [
+    {
+      "problem": "LLM agent 持久记忆的多阶段流水线（ingestion/retrieval/filtering/generation）出错时，端到端评估只能显示“发生了错误”，无法定位是哪一个阶段导致；现有评估往往只报告聚合性能，缺少配对统计、受保护切片回归检查与阶段级诊断轨迹，导致记忆系统迭代不可靠。",
+      "inputs_outputs": "输入：待评估的记忆增强智能体流水线 P_θ、候选记忆干预假设 H_t、目标切片与基准任务。输出：智能体回答、每阶段诊断轨迹 d_i、DCR 可定位性分数、配对统计结果、切片监控结果，以及 outer gate 的 promote/feature-flag/reject 决定；评估 artifact 保存正/零发现以供重放。",
+      "state_or_interface": "Inner loop 流水线 P_θ 在 ingest/update/retrieve/constrain/assemble/answer 各阶段发出诊断轨迹 d_i，形成诊断 artifact。D2 ACCI-Eval 作为可复用评估 artifact，保存配对运行、受保护切片门、discordance 导出与确定性的 gate replay 配置；MemStack 使用多粒度存储和 feature-flagged retrieval（如 BM25/RRF 作为受监控 feature flag）。Outer gate 读取配对证据、切片监控输出和 trace 级可定位性（DCR）后做出 promote/feature-flag/reject。",
+      "algorithm_steps": [
+        "运行 inner loop：执行记忆增强智能体流水线 P_theta，依次完成 ingestion、memory update、retrieval、constraint/filter、context assembly、answer generation，并在每一阶段发出诊断轨迹 d_i。",
+        "指定 outer-loop 假设 H_t：为一个候选记忆干预明确目标切片和预期失败机制。",
+        "对候选干预进行配对评估：运行 baseline 与干预配置，计算配对统计差异，执行受保护切片非回归检查，并测量诊断 artifact 的 DCR@k（trace 级可定位性）。",
+        "按决策合同执行 gate：若配对证据为正向、受保护切片无回归、trace 可定位性满足阈值，则 promote；若证据不显著或存在权衡，则 feature-flag 保留为受监控开关；若出现回归或局部化不足，则 reject。",
+        "将本次评估的阳性与 null 结果写入 D2 ACCI-Eval artifact，供后续迭代的确定性 gate replay 和证据复用。"
       ],
-      "body_chars": 1940,
-      "mechanism_chars": 682,
-      "mechanism_ratio": 0.352,
-      "primary_mechanism_chars": 392
+      "evidence": [
+        {
+          "claim": "D2 ACCI 是双环协议：内环运行记忆增强智能体，外环评估候选变更并决定 promote/feature-flag/reject。",
+          "evidence_id": "ev_812c9b4e62bf"
+        },
+        {
+          "claim": "持久记忆流水线失败难以定位的典型阶段包括：抽取失败、与另一记忆错误合并、检索不相关、过滤过度、关键更新未进入 final prompt。",
+          "evidence_id": "ev_812c9b4e62bf"
+        },
+        {
+          "claim": "外环决策合同依据 paired statistical evidence、protected-slice non-regression checks、trace-level localizability。",
+          "evidence_id": "ev_812c9b4e62bf"
+        },
+        {
+          "claim": "DCR 是一种分级可观测性指标，衡量失败是否仍可定位；诊断 artifact 的 DCR@3 达 98–100%，而 results-only 日志为 0%。",
+          "evidence_id": "ev_812c9b4e62bf"
+        },
+        {
+          "claim": "记忆改进是非单调的：放宽检索可能找回时间相关证据却引入冲突偏好，加强去重可能删除稀有但关键的事实。",
+          "evidence_id": "ev_812c9b4e62bf"
+        },
+        {
+          "claim": "在 MemStack 实例中，supplement extraction、session-memory retrieval、Forget Guard 带来统计显著增益（+1.9 到 +3.7pp, p≤0.003）；BM25/RRF 无统计显著提升，被保留为受监控 feature flag。",
+          "evidence_id": "ev_812c9b4e62bf"
+        }
+      ],
+      "failure_modes": [
+        "抽取失败导致记忆未进入存储",
+        "记忆与另一条记忆错误合并/consolidation 错误",
+        "检索返回不相关内容",
+        "过滤过度删除有用记忆",
+        "关键更新未进入 final prompt",
+        "放宽检索甚至可用证据但引入冲突偏好",
+        "加强去重可能删除稀有但关键的记忆"
+      ],
+      "limits": [
+        "原文片段未明确给出协议自身的限制；从结果看，DCR 依赖诊断 artifact，普通 results-only 日志可定位性为 0%。",
+        "PersonaMem-V2 仅达到 57.20%，仍存在明显提升空间。",
+        "聚合准确率无法揭示 BM25/RRF 的受监控 feature flag 第三态，必须依赖切片与决策合同。"
+      ],
+      "gaps": [
+        "Algorithm 1 在原文片段中只列出前两步，完整的 outer-loop 决策流程未被逐条给出。",
+        "DCR 的精确计算方式/覆盖度定义未在片段中给出，仅报告了 DCR@3 数值。",
+        "配对统计的具体检验方法和 p 值校正方式未说明。",
+        "protected-slice 具体定义、阈值与监控实现未描述。",
+        "MemStack 的多粒度存储和 feature-flag 具体 API/数据结构未展开。",
+        "extractor_not_confident"
+      ],
+      "confidence": "low",
+      "title": "D$^2$ACCI: A Dual-Loop Diagnostic Protocol for Evidence-Preserving Agent Memory",
+      "url": "https://arxiv.org/abs/2608.17756",
+      "evidence_id": "ev_812c9b4e62bf",
+      "thin_source": false,
+      "method_role": "primary_subject"
+    },
+    {
+      "problem": "在 agentic memory 中，并非注入越多经验越好；需要为不同能力模型校准合适的记忆剂量，以避免大指南集淹没较弱模型或对饱和模型无效。",
+      "inputs_outputs": "输入：AppWorld 训练集上的 agent 轨迹（用于构建记忆）；推理时，AppWorld 任务与记忆配置（全量指南集或策展检索子集）。输出：任务目标完成率 TGC、场景目标完成率 SGC、每任务 token 成本；中间产物为可复用指南集。",
+      "state_or_interface": "状态为从 agent 自身轨迹中蒸馏出的可复用指南集（包含成功策略、需避免错误、边界情况）。推理时，该指南集通过上下文窗口注入，全量模式每步重新发送全部指南，策展模式按任务选择子集；不更新模型权重。原文未描述具体检索、合并数据结构或 API。",
+      "algorithm_steps": [
+        "在 AppWorld 训练分割上运行 agent，收集成功和失败任务的完整轨迹。",
+        "从每条轨迹中提取行为指南：成功策略、错误避免、边界情况，不做权重更新、不依赖人工标注。",
+        "将提取出的指南合并为一个可复用指南集，作为该模型的记忆。",
+        "选择推理投递模式：全量指南集（每步注入全部指南）或策展检索（每任务检索相关子集）。",
+        "在推理的每个 ReAct 步骤中，将所选指南集或子集注入上下文并执行任务。",
+        "在 AppWorld test_normal/test_challenge 上计算 TGC/SGC，并统计每任务累积 token 成本。"
+      ],
+      "evidence": [
+        {
+          "claim": "ALK-Evolve 从自身历史轨迹中蒸馏可复用指南并在推理时注入，无权重更新、无人工标注。",
+          "evidence_id": "ev_91a5b0527ced"
+        },
+        {
+          "claim": "在 8 个模型上观察到三种模式：有余量模型适合全量指南集，较弱模型适合紧致核心 + 逐任务检索，饱和模型无可测增益。",
+          "evidence_id": "ev_91a5b0527ced"
+        },
+        {
+          "claim": "DeepSeek-V3.2 (671B MoE) 使用全量自我挖掘指南集时 TGC 提升 +9.5pp。",
+          "evidence_id": "ev_91a5b0527ced"
+        },
+        {
+          "claim": "gpt-oss-120b (117B MoE) 使用选择性检索获得 +16.1pp TGC，而全量指南集增益更小且 token 成本约 +50%。",
+          "evidence_id": "ev_91a5b0527ced"
+        },
+        {
+          "claim": "策展检索可以同时最准最省：gpt-oss-120b 仅 +5% tokens 获得 +16.1pp TGC。",
+          "evidence_id": "ev_91a5b0527ced"
+        },
+        {
+          "claim": "GLM-5 (745B MoE) 处于饱和模式，无可测增益；该标签是观察结果而非已证明成因。",
+          "evidence_id": "ev_91a5b0527ced"
+        },
+        {
+          "claim": "TGC 低估了 SGC 收益：DeepSeek SGC +16.1pp vs TGC +9.5pp；GPT-5.5 和 Opus 接近 TGC 上限仍分别 +7.2/+7.1pp SGC。",
+          "evidence_id": "ev_91a5b0527ced"
+        },
+        {
+          "claim": "指南数量因模型能力而异，因此报告配置按策略（全量 vs 策展检索）而非原始数量，因为原始数量不可跨模型比较。",
+          "evidence_id": "ev_91a5b0527ced"
+        },
+        {
+          "claim": "全量指南集会在每个 ReAct 步骤中重新发送，抬高输入 token；而策展检索保持接近基线成本。",
+          "evidence_id": "ev_91a5b0527ced"
+        }
+      ],
+      "failure_modes": [
+        "较弱模型被大指南集淹没，全量指南集反而增益更小且成本上升。",
+        "饱和模型无可测增益，可能已接近任务上限、指南未覆盖剩余失败或未有效应用指南。",
+        "全量指南集每个 ReAct 步骤重复发送导致 token 膨胀。",
+        "不同模型挖掘出的指南数量不同，原始数量不可跨模型比较。",
+        "指南质量、任务分布、上下文窗口大小等因素可能使某些模型无法从记忆中受益。"
+      ],
+      "limits": [
+        "三种模式是观察标签，不是已证明的因果关系，拆分影响因素仍是进行中的工作。",
+        "仅在 AppWorld 环境上评估，任务分布和仿真环境可能影响结论外推。",
+        "只改变推理时可用的指导，不更新底层模型；模型固有短板无法通过指南消除。",
+        "全量指南集的成本高度依赖提示缓存；未缓存时成本可能显著上升。"
+      ],
+      "gaps": [
+        "原文未描述指南提取、合并/去重的具体算法。",
+        "原文未描述策展检索的具体实现、相似度或选择机制。",
+        "未提供指南集状态的数据结构或注入 API，只提到上下文窗口注入。",
+        "未给出各模型原始指南数量或 headroom/drowned/saturated 分类的量化阈值。",
+        "未说明提示格式、采样参数等推理细节。"
+      ],
+      "confidence": "high",
+      "title": "How Much Memory Does Your Agent Actually Need? (IBM ALTK-Evolve)",
+      "url": "https://huggingface.co/blog/ibm-research/altk-evolve-hmm",
+      "evidence_id": "ev_91a5b0527ced",
+      "thin_source": false,
+      "method_role": "background"
+    },
+    {
+      "problem": "如何从数据管理视角系统评估 agent 记忆系统，而不是用端到端任务指标把系统当黑箱，从而揭示架构权衡、动态更新鲁棒性和运维成本。",
+      "inputs_outputs": "输入：12 个代表性记忆系统 + 2 个参考基线，五个 benchmark workload（跨 11 个数据集），统一测试床（含统一时间开销 traces）。输出：端到端评测结果、细粒度消融指标（representation fidelity、retrieval precision、update correctness、long-horizon stability）、成本-性能权衡（局部维护 vs 全局重组）。",
+      "state_or_interface": "分析框架定义四个核心模块：representation and storage、extraction、retrieval and routing、maintenance；每个模块有结构化分类法。测试床接口：统一时间开销 traces 和五个 workload。原文未定义具体的持久化状态、数据结构或 API，只提供模块边界和评测接口。",
+      "algorithm_steps": [
+        "将 agent 记忆系统分解为四个核心模块：representation and storage、extraction、retrieval and routing、maintenance。",
+        "为每个模块建立结构化分类法，按底层设计原则对现有方法归类。",
+        "在统一测试床（含统一时间开销 traces）上对 12 个记忆系统和 2 个基线运行五个 benchmark workload 的端到端评测。",
+        "对每个模块做细粒度消融，量化其对 representation fidelity、retrieval precision、update correctness、long-horizon stability 的独立影响。",
+        "测量并比较局部维护与全局重组在真实 workload 下的成本-性能权衡。"
+      ],
+      "evidence": [
+        {
+          "claim": "提出将 agent 记忆分解为四个核心模块的分析框架",
+          "evidence_id": "ev_4bdff3c33875"
+        },
+        {
+          "claim": "在 12 个记忆系统和 2 个基线、五个 benchmark workload 跨 11 个数据集上评测",
+          "evidence_id": "ev_4bdff3c33875"
+        },
+        {
+          "claim": "没有单一架构在所有场景占优，效果取决于记忆结构与 workload 瓶颈的对齐",
+          "evidence_id": "ev_4bdff3c33875"
+        },
+        {
+          "claim": "细粒度消融量化 representation fidelity、retrieval precision、update correctness、long-horizon stability 的影响",
+          "evidence_id": "ev_4bdff3c33875"
+        },
+        {
+          "claim": "局部维护比全局重组更省成本",
+          "evidence_id": "ev_4bdff3c33875"
+        },
+        {
+          "claim": "现有评测主要用 F1/BLEU 等端到端指标，把系统当黑箱，忽视成本、架构权衡和动态更新鲁棒性",
+          "evidence_id": "ev_4bdff3c33875"
+        }
+      ],
+      "failure_modes": [
+        "记忆系统可能产生事实矛盾、灾难性遗忘或延迟不可接受。",
+        "现有评测无法隔离证据级检索保真度、动态更新鲁棒性和长期稳定性。",
+        "没有单一架构在所有场景通吃，架构与 workload 瓶颈不匹配会导致效果差。"
+      ],
+      "limits": [
+        "只覆盖 12 个记忆系统和 2 个基线，未涵盖所有可能的记忆架构和任务特定框架中的辅助记忆模块。",
+        "评测聚焦 memory-centric 系统，不包括任务特定 agent 框架中的辅助记忆模块。",
+        "原文摘要未给出具体数值结果和每个 workload 的详细定义。"
+      ],
+      "gaps": [
+        "五个 benchmark workload 的具体名称和任务设置未在摘要中列出（文中被截断）。",
+        "四模块分类法下每个类别的具体设计原则和系统归类细节未提供。",
+        "没有给出各个系统的内部数据结构和 API 实现。",
+        "消融实验的具体操作和度量公式未说明。"
+      ],
+      "confidence": "high",
+      "title": "Are We Ready For An Agent-Native Memory System?",
+      "url": "https://arxiv.org/abs/2606.24775",
+      "evidence_id": "ev_4bdff3c33875",
+      "thin_source": false,
+      "method_role": "background"
+    },
+    {
+      "problem": "维护面向长周期企业 agent 的异构记忆：跨扩展对话保留任务状态、跨会话恢复用户特定事实与偏好、从先前结果积累程序性知识；需要决定哪些交互成为持久状态、如何划分作用域、如何在延迟约束下检索，以及如何随时间修订或删除；不是单纯的转录召回。",
+      "inputs_outputs": "输入：新消息、工具调用轨迹等原始交互记录，需附带 user/agent/thread 作用域。输出：抽取的候选记忆与持久记忆产物，包括 thread summaries、context cards、facts、preferences、rules、lessons/guidelines；新任务所需的检索或重组记忆子集；下游任务准确率及记忆中心指标。",
+      "state_or_interface": "数据库原生存储：Oracle Database 作为 substrate，包含 relational storage、JSON、vectors、transactions。分层架构：active memory core（处理生命周期）与 passive memory-store interface（存储/检索）分离，带跨 user/agent/thread 的显式作用域控制。工作记忆/短期状态：thread summaries、context cards、unresolved subgoals、recent actions。长期事实记忆：用户偏好、已知事实、规则、profile-like attributes、领域知识。长期经验/程序记忆：outcomes、strategies、lessons、guidelines。",
+      "algorithm_steps": [
+        "将新消息或工具轨迹作为原始记录摄入系统，并附加 user/agent/thread 作用域。",
+        "对原始记录触发候选记忆抽取；若属于当前线程交互，则生成或更新 thread summary 与 context card 作为短期工作记忆。",
+        "对跨记录重复出现的证据执行 consolidation，合并为长期事实记忆（偏好、规则、领域知识）或长期经验/程序记忆（教训、策略、指南）。",
+        "对含文本的记录和记忆产物建立索引（关系型、JSON、向量）以支持语义检索。",
+        "新任务到来时，按作用域过滤并检索相关记忆子集，重组为上下文，受 token 与延迟约束。",
+        "随着证据变化，对记忆执行修订、合并、重新划分作用域或删除。"
+      ],
+      "evidence": [
+        {
+          "claim": "Oracle Agent Memory 将记忆建模为生命周期，包含 ingestion、extraction、consolidation、retrieval、summarization、revision/removal。",
+          "evidence_id": "ev_3a19d1d83d74"
+        },
+        {
+          "claim": "架构分为 active memory core 与 passive memory-store interface，并有跨 user/agent/thread 的显式作用域控制。",
+          "evidence_id": "ev_3a19d1d83d74"
+        },
+        {
+          "claim": "在 LongMemEval 上达到 93.8% 准确率，且相对 flat-history 基线约省 10.7× token。",
+          "evidence_id": "ev_3a19d1d83d74"
+        },
+        {
+          "claim": "新消息或工具轨迹作为 raw records 进入系统，可能触发候选记忆抽取、线程摘要、证据整合、索引化语义检索，以及后续的检索/重组和修订/删除。",
+          "evidence_id": "ev_3a19d1d83d74"
+        },
+        {
+          "claim": "短期记忆主要由 thread summaries 和 context cards 表示；长期事实记忆存偏好/事实/规则；长期经验/程序记忆存 outcomes/strategies/lessons/guidelines。",
+          "evidence_id": "ev_3a19d1d83d74"
+        }
+      ],
+      "failure_modes": [
+        "事实或偏好随时间改变但未触发 revision/removal，导致检索到过时记忆。",
+        "作用域控制失效会造成跨 user/agent/thread 的信息泄露或错误归因。",
+        "只存储原始事件而不识别和整合经验教训，无法形成可复用的程序性记忆。",
+        "长期记忆未压缩或检索未优化时，可能超过 token 或延迟约束。",
+        "语义检索可能返回相关但不准确的证据，需要 evidence retrieval/recall 等指标衡量。"
+      ],
+      "limits": [
+        "原文只给出高层生命周期和架构，没有具体 extraction/consolidation/retrieval 算法实现。",
+        "未提供 latency、recall、evidence retrieval 的具体数值，仅报告 accuracy 和 token 节省。",
+        "未说明 revision/removal 的触发条件、冲突合并规则或作用域实施机制。"
+      ],
+      "gaps": [
+        "缺少 active memory core 与 passive memory-store interface 的具体 API 或方法签名。",
+        "缺少索引实现、向量检索相似度算法、存储布局等实现细节。",
+        "缺少除 LongMemEval 以外的完整外部基线对比和失败案例分析。",
+        "原文提到附录包含 setup、thread lifecycle、search semantics，但 excerpt 未提供这些内容。"
+      ],
+      "confidence": "high",
+      "title": "Oracle Agent Memory as an Enterprise Memory Substrate for Long-Horizon AI Agents",
+      "url": "https://arxiv.org/abs/2607.13157",
+      "evidence_id": "ev_3a19d1d83d74",
+      "thin_source": false,
+      "method_role": "background"
+    },
+    {
+      "problem": "Amortize the cost of inference-time reasoning by converting transient critiques/evaluations into persistent, retrievable guidelines instead of discarding feedback, avoiding repeated ab initio reasoning per query without parameter updates.",
+      "inputs_outputs": "Inputs: task prompt z; optionally evaluator feedback feed_i generated from an initial response x_i and a private rubric R. Outputs: generated or refined text x/x'; updates to a persistent file-based memory M via tool calls.",
+      "state_or_interface": "Memory M is a set of human-readable documents stored in a persistent file system, not a vector database. The LLM agent accesses it through tool calls: ls(path=\"/memories/\") to list files, read_file(path) to read selected memory content, and write_file/edit_file to create or update memory files. Files are expected to have semantically meaningful, generalizable filenames (e.g., review_creative_rubric.txt rather than note_1.txt).",
+      "algorithm_steps": [
+        "For a task prompt z_i, generate an initial response x_i from the LLM.",
+        "Run an evaluator LLM to produce feedback feed_i based on x_i and a private rubric R.",
+        "Upon receiving negative feedback, trigger a memory update: abstract the raw feedback into a generalizable policy (e.g., turn 'You failed to use synesthetic language in paragraph 2' into 'Prioritize synesthetic blending—colors that sound, sounds that taste').",
+        "Resolve conflicts by deciding whether to create a new memory file with write_file or update an existing file with edit_file, using general reusable filenames.",
+        "At test time on a new task z, retrieve relevant memory by first calling ls(path=\"/memories/\") to list files, then calling read_file(path) on files selected based on filenames and the current task.",
+        "Generate a refined response x' conditioned on z and the retrieved memory content M'."
+      ],
+      "evidence": [
+        {
+          "claim": "The framework converts transient critiques into retrievable guidelines through a file-based memory system and agent-controlled tool calls.",
+          "evidence_id": "ev_c879e56b87a0"
+        },
+        {
+          "claim": "In iterative refinement, an evaluator produces feedback using a private rubric, and the proposed framework distills that feedback into persistent memory.",
+          "evidence_id": "ev_c879e56b87a0"
+        },
+        {
+          "claim": "Memory update involves abstraction of raw feedback into generalizable policy and conflict resolution via write_file/edit_file.",
+          "evidence_id": "ev_c879e56b87a0"
+        },
+        {
+          "claim": "Retrieval is a two-step process: listing files with ls(path=\"/memories/\") and reading selected files with read_file(path).",
+          "evidence_id": "ev_c879e56b87a0"
+        },
+        {
+          "claim": "Augmented LLMs rapidly match the performance of test-time refinement pipelines while drastically reducing inference cost.",
+          "evidence_id": "ev_c879e56b87a0"
+        },
+        {
+          "claim": "In long-horizon experiments with interleaved task types, the approach demonstrates robust knowledge consolidation with minimal interference.",
+          "evidence_id": "ev_c879e56b87a0"
+        }
+      ],
+      "failure_modes": [
+        "Retrieval may fail if memory filenames are not semantically meaningful, since the model must select files based on names.",
+        "The agent may fail to abstract specific feedback into a generalizable policy, leaving raw episodic detail in memory.",
+        "Conflict resolution may fail to deduplicate knowledge or resolve contradictions between old and new feedback."
+      ],
+      "limits": [
+        "Memory is file-based and relies on LLM agentic reasoning for retrieval, rather than opaque embedding-based semantic search.",
+        "Only demonstrated on the Rubric Feedback Bench dataset in the provided excerpt.",
+        "Requires the model to produce and maintain semantically meaningful, generalizable filenames for effective retrieval.",
+        "The excerpt does not report quantitative cost/performance numbers or comparisons beyond stated claims."
+      ],
+      "gaps": [
+        "The exact evaluation rubric or its private nature is not detailed in the excerpt.",
+        "The system prompt is only partially shown; the full tool-calling protocol and environment implementation are not provided.",
+        "No decision rule is specified for choosing write_file versus edit_file during conflict resolution.",
+        "The excerpt does not give quantitative experimental results, baselines, or statistical details."
+      ],
+      "confidence": "high",
+      "title": "Distilling Feedback into Memory-as-a-Tool",
+      "url": "https://arxiv.org/abs/2601.05960",
+      "evidence_id": "ev_c879e56b87a0",
+      "thin_source": false,
+      "method_role": "background"
     }
-  },
-  "claims": [],
-  "date": "2026-08-19"
+  ],
+  "date": "2026-08-20"
 }

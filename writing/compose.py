@@ -1,6 +1,4 @@
-"""
-短深文成文：大纲 -> 撰写 -> 编辑审稿 -> 事实核查 -> 引用编号。
-"""
+"""三角色成文：研究包 -> 主编初稿 -> 事实编辑 -> 主编修订 -> 引用编号。"""
 
 from __future__ import annotations
 
@@ -11,15 +9,12 @@ from pathlib import Path
 
 import config
 from research.evidence import EvidenceStore
-from writing.editorial_review import enforce_title_body_numbers, review_and_revise_section
-from writing.factcheck import verify_and_revise_section
+from writing.editorial_review import enforce_title_body_numbers
 from writing.full_draft import generate_full_draft
 from writing.outline import generate_outline
-from writing.quality_gate import run_article_quality_gate
-from writing.reader_review import (
-    ensure_reader_context, reader_review_passed, repair_context_for_reader, review_for_cold_reader,
-)
+from writing.reader_review import ensure_reader_context
 from writing.contracts import validate_concept_dependencies
+from writing.three_role_editorial import run_three_role_editorial
 
 logger = logging.getLogger(__name__)
 
@@ -61,31 +56,16 @@ def compose_article(
     section_texts = list((saved_draft or {}).get("sections", []))
     if not saved_draft:
         raw_sections, draft_model = generate_full_draft(topic_name, outline, dossier, evidence_store)
-        section_texts = []
-    for section, raw_section in ([] if saved_draft else zip(outline.get("sections", []), raw_sections, strict=True)):
-        card = None
-        if (section.get("role") or "").lower() == "mechanism":
-            idx = section.get("card_index")
-            if isinstance(idx, int) and 0 <= idx < len(high_cards):
-                card = high_cards[idx]
-
-        logger.info("撰写小节: %s (role=%s)", section.get("heading"), section.get("role", ""))
-        edited = review_and_revise_section(
-            raw_section["text"],
-            section,
-            thesis=thesis,
-            mechanism_card=card,
-        )
-        checked = verify_and_revise_section(edited, evidence_store)
-        section_texts.append(
+        section_texts = [
             {
-                "heading": raw_section.get("heading") or section["heading"],
-                "text": checked,
-                "role": section.get("role", ""),
-                "card_index": section.get("card_index"),
-                "method_role": section.get("method_role"),
+                "heading": raw.get("heading") or expected.get("heading", ""),
+                "text": raw.get("text", ""),
+                "role": expected.get("role", ""),
+                "card_index": expected.get("card_index"),
+                "method_role": expected.get("method_role"),
             }
-        )
+            for expected, raw in zip(outline.get("sections", []), raw_sections, strict=True)
+        ]
 
     if draft_checkpoint and not saved_draft:
         draft_checkpoint.parent.mkdir(parents=True, exist_ok=True)
@@ -94,31 +74,13 @@ def compose_article(
             encoding="utf-8",
         )
 
-    # 冷启动审稿只看成稿，不允许依据研究档案替正文脑补。失败后只定点修复背景节。
-    reader_reviews = []
-    for round_index in range(2):
-        reader_review = review_for_cold_reader(article_title, section_texts)
-        reader_reviews.append(reader_review)
-        if reader_review_passed(reader_review):
-            break
-        if round_index == 1:
-            from writing.quality_gate import ArticleQualityError
-            raise ArticleQualityError("reader_background_failed", {"reader_review": reader_review, "rounds": reader_reviews})
-        context = next((s for s in section_texts if s.get("role") == "context"), None)
-        if context is None:
-            from writing.quality_gate import ArticleQualityError
-            raise ArticleQualityError("reader_context_section_missing", {"reader_review": reader_review})
-        context["text"] = repair_context_for_reader(
-            context.get("text", ""), reader_review, reader_context
-        )
-        context["text"] = verify_and_revise_section(context["text"], evidence_store)
-
-    # 在把内部 evidence marker 转成脚注编号之前做整篇 claim 审计，
-    # 否则终审无法把正文论断映射回证据片段。
-    quality = run_article_quality_gate(
-        article_title, thesis, section_texts, evidence_store,
-        reader_review=reader_reviews[-1], mechanism_cards=high_cards,
+    # 三角色主流程：研究助理已提供 dossier；主编产出上面的完整初稿；
+    # 事实编辑只提交问题清单；主编最多进行一次全篇修订。
+    editorial = run_three_role_editorial(
+        article_title, thesis, section_texts, outline.get("sections", []),
+        high_cards, evidence_store,
     )
+    section_texts = editorial.sections
 
     citation_order: list[str] = []
     citation_number: dict[str, int] = {}
@@ -176,7 +138,7 @@ def compose_article(
         "bibliography": bibliography,
         "featured_works": featured_works[:5],
         "open_questions": open_questions,
-        "quality_report": quality.to_dict(),
+        "quality_report": editorial.to_dict(),
         "claim_ledger": evidence_store.claim_list(),
         "generation": {
             "outline_model": outline.get("_model_used", config.MODEL_WRITING),

@@ -31,6 +31,10 @@ REVIEW_SYSTEM_PROMPT = """\
 致命问题按 role 判断：context 背景模糊；mechanism 步骤没写全或空指代；任何 role 出现成绩单/字段清单腔；close 开新战线。
 不要因 context/close 没有复述 mechanism card 而判失败。
 
+语言检查：遵循中文技术社区习惯，避免把产品名、API 对象和工程术语机械直译。
+例如产品语境中的 Skills 不写成“技能”，agent/prompt/token 可自然保留英文。但普通语境中的 skill 可以译为能力。
+术语选择只有在造成概念混淆时才影响 clarity；不要为了形式统一而重写本来自然的句子。
+
 只返回 JSON：
 {
   "scores": {"clarity": 1, "mechanism_coverage": 1, "prose_not_table": 1},
@@ -45,6 +49,8 @@ REVISE_SYSTEM_PROMPT = """\
 你是原文作者，按编辑反馈修改本节（中文 Markdown）。
 - 补机制步骤时写成连贯散文或一段伪代码，不要改成字段列表/成绩单。
 - 删除空指代；不要编造新数字。
+- 修复明显机械直译；保留技术社区习惯使用的英文，不追求中文/英文绝对统一。
+- 不要给正常作者分析逐句添加“可能、可以推测”等免责声明，只收窄无证据的强断言。
 - 直接输出修改后全文，不要解释。
 """
 

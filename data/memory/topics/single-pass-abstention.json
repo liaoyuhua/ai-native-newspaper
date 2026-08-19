@@ -1,0 +1,76 @@
+{
+  "topic_id": "single-pass-abstention",
+  "display_name": "单次前向答题与拒答",
+  "aliases": [
+    "answer-or-abstain",
+    "YOPO",
+    "frozen LLM abstain without classifier",
+    "sufficiency direction",
+    "single-pass abstention",
+    "无需分类器拒答",
+    "Can a frozen LLM abstain from answering in a single forward pass without a separate classifier or retraining?",
+    "steering/sufficiency 干扰",
+    "单次前向拒答"
+  ],
+  "coverage": [
+    {
+      "week_id": "2026-W34",
+      "article_title": "单次前向里同时答题与拒答：YOPO 把跨域 AUROC 从 0.836 修到 0.888",
+      "covered_angles": [
+        "架构整合：在 mid-stack 残差流上，条件 steering probe 写入负责答题，固定 sufficiency 方向读取同一条流负责拒答，并用无标签 MSE 网络在读取前还原被 steering 修改的残差。",
+        "干扰量化：直接读取 steered 残差使小模型跨域 AUROC 最多下降 8 个点；读未 steering 的独立 pass 给出 two-pass ceiling，但推理成本翻倍。",
+        "还原效果与代价：标签无关还原网络在 1.5B 上 transfer AUROC 0.836→0.888、in-domain 0.913→0.959；监督 gate 是旗舰但在小模型上有可量化的 transfer 代价。",
+        "容量-迁移前沿：干扰集中于小模型，7B 上 steered 残差反而成为更好的读取基底，identity 初始化的还原网络学会不做任何事。",
+        "基线定位：相对 ITI（只有写没有读）、P(True)（next-token 自评）、semantic uncertainty（多遍采样），YOPO 是单 pass 内写+读+还原的组合。",
+        "评测方法学自审：发现 αNLI 的 early-layer separability 泄漏表层捷径，改用 SQuAD2/RepLiQA/MuSiQue 原生标签数据复证，并提出四域 answer-or-abstain 基准。"
+      ],
+      "key_works_covered": [
+        {
+          "title": "You Only Pass Once: Answering and Abstaining Together in a Single Forward Pass of a Frozen Language Model (YOPO)",
+          "url": "https://arxiv.org/abs/2608.14465",
+          "note": "本期主角：在同一残差流上组合 steering 写入、sufficiency 读出与无标签 MSE 还原，量化干扰并跨模型家族验证单 pass 方案。"
+        },
+        {
+          "title": "Language Models (Mostly) Know What They Know (Kadavath et al., 2022)",
+          "url": "https://arxiv.org/abs/2207.05221",
+          "note": "next-token 自评估 P(True) 基线代表：先硬生成答案再自评，依赖最后一层分布，与 mid-stack 残差方向路线形成对照。"
+        },
+        {
+          "title": "Inference-Time Intervention: Eliciting Truthful Answers from a Language Model (Li et al., 2023)",
+          "url": "https://arxiv.org/abs/2306.03341",
+          "note": "steering 写方向的祖先工作：只在激活上加方向、没有同流上的 sufficiency 读出，因此无法拒答。"
+        },
+        {
+          "title": "Semantic Uncertainty: Linguistic Invariances for Uncertainty Estimation in Natural Language Generation (Kuhn, Gal, Farquhar, 2023)",
+          "url": "https://arxiv.org/abs/2302.09664",
+          "note": "multi-pass 不确定度基线代表：多次采样+语义聚类；YOPO 用单次前向直接读 sufficiency，避免其 N-pass 成本。"
+        }
+      ],
+      "open_questions": [
+        "为什么 steering 与 sufficiency 的干扰会随容量反转（小模型互相破坏、7B 上 steered 残差反而更好）？论文给出量化与 identity 初始化经验解法，但没有机制解释——这是悬而未决的表示论问题。",
+        "标签无关方向『在 MuSiQue 上拟合』是否本身就是一种弱监督（源域选择即归纳偏置）？它能否在论文未测的领域/家族之外继续不坍缩，仍待验证。",
+        "answer-or-abstain 基准极易泄漏表层捷径（αNLI 的 early-layer separability 假象）——如何在拒答评测中系统性地排除这种捷径，是本方向的开放方法学问题。"
+      ],
+      "follow_up_signals": [
+        "有论文从表示论/phase change 角度解释 steering 与 sufficiency 干扰随容量反转的机制（尤其 >7B、MoE、非 Qwen 家族）。",
+        "出现新的 answer-or-abstain 基准或对现有基准（αNLI 等）的泄漏审计，证明或否定 early-layer separability 假象在更多数据集上存在。",
+        "YOPO 的标签无关 sufficiency 方向在未测领域/模型家族（非 Qwen2.5、>7B、MoE）上被测试，且出现坍缩或显著低于 in-domain 天花板。",
+        "新的单次前向方法在相同三分类/跨域 AUROC 指标上超过 YOPO，或声称无需 undo 网络，或一次性方法追平/超过 two-pass ceiling。",
+        "有系统级部署/开源实现把该机制用于真实 QA 产品，并报告 online abstention 效果。"
+      ],
+      "avoid_repeating": [
+        "不要再从零介绍 YOPO 的 steering probe、sufficiency direction、MSE 还原网络三件套如何拼接。",
+        "不要重复 ITI、P(True)、semantic entropy 的具体做法与实验数值。",
+        "不要重新展开单 pass vs two-pass ceiling 的 0.836→0.888 对比，以及 7B 反转的详细数据。",
+        "不要把 αNLI early-layer separability 泄漏作为新发现重新论证。"
+      ]
+    }
+  ],
+  "one_line_summary": "冻结 LLM 可以在单次前向中利用残差流里固定的零样本 sufficiency 方向进行拒答，无需额外分类器、重训或第二遍前向；真正成本在 steering 写入对该方向的污染，而无标签 MSE 还原网络可近乎免费地 undo，且该干扰随容量变化——小模型互相破坏、7B 上反而增强。",
+  "standing_open_questions": [
+    "为什么 steering 与 sufficiency 的干扰会随容量反转（小模型互相破坏、7B 上 steered 残差反而更好）？论文给出量化与 identity 初始化经验解法，但没有机制解释——这是悬而未决的表示论问题。",
+    "标签无关方向『在 MuSiQue 上拟合』是否本身就是一种弱监督（源域选择即归纳偏置）？它能否在论文未测的领域/家族之外继续不坍缩，仍待验证。",
+    "answer-or-abstain 基准极易泄漏表层捷径（αNLI 的 early-layer separability 假象）——如何在拒答评测中系统性地排除这种捷径，是本方向的开放方法学问题。"
+  ],
+  "updated_at": "2026-08-19T15:58:10Z"
+}

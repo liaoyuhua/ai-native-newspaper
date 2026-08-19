@@ -1,29 +1,29 @@
 {
   "run_id": "2026-W34-scan",
   "workflow": "weekly_scan_v2",
-  "status": "skipped",
-  "started_at": "2026-08-17T02:05:16.513646+00:00",
-  "finished_at": "2026-08-17T02:12:20.089521+00:00",
-  "python_version": "3.12.13",
+  "status": "completed",
+  "started_at": "2026-08-19T16:00:34.356748+00:00",
+  "finished_at": "2026-08-19T16:07:12.415472+00:00",
+  "python_version": "3.10.10",
   "config": {
     "lookback_days": 14,
     "schema_version": "2.0",
-    "no_issue": false
+    "no_issue": true
   },
   "stages": [
     {
       "name": "selection_completed",
-      "at": "2026-08-17T02:12:20.089508+00:00",
-      "item_count": 411,
+      "at": "2026-08-19T16:07:12.415349+00:00",
+      "item_count": 563,
       "shortlist_count": 5,
-      "recommendation": "skip",
+      "recommendation": "pursue",
       "source_health_counts": {
-        "healthy": 10,
-        "stale": 1
+        "healthy": 11
       }
     }
   ],
   "decision": {
-    "reason": "quality_threshold_not_met"
+    "selected_question": "Can persistent agent memory failures be localized to a specific pipeline stage?",
+    "score": 4.056
   }
 }

@@ -1,6 +1,49 @@
 {
   "topics": [
     {
+      "topic_id": "llm-judge-fdr-abstention",
+      "display_name": "LLM 事实裁判的 FDR 控制与弃权",
+      "aliases": [
+        "不确定性感知弃权",
+        "LLM 裁判风险控制",
+        "选择性预测",
+        "可证明风险保证",
+        "置信度校准",
+        "Can uncertainty-aware abstention provably bound the risk of LLM judges?"
+      ],
+      "one_line_summary": "LLM 裁判用于客观事实判定时，核心问题已从提升准确率转向提供有限样本统计风险合同：通过 Clopper–Pearson 校准与检索回退实现 FDR 上界，但该合同仅覆盖校准过程，置信信号在分布偏移下失效是未解决的关键瓶颈。",
+      "standing_open_questions": [
+        "裁判置信度的具体来源未在已抓取的全文片段中披露（token 概率、多次采样自洽度、还是口述置信度）。不同的信号在分布偏移下失效方式不同（视频 QA 研究显示 self-reported 与 logprob p_max 都『不知道自己不知道』），写作前必须核对方法节确认其 UQ 信号并检查是否有跨分布验证。",
+        "有限样本 FDR 保证的可交换性假设在部署中极易被打破：Abstention Knobs 论文证明置信度在证据退化下不收缩、阈值静默超收；主角论文声称保证对两级路由『无需额外假设』，但那是路由统计的数学性质，不等于置信信号在偏移数据上仍有区分度——'保证能否跨分布兑现'是未解决的争议点。",
+        "『不确定性弃权在相同 FDR 下覆盖率高于随机弃权』这一 thesis 成分没有被原文直接验证（原文的对比对象是单模式基线，非随机弃权）；它依赖『置信度能给错误排序』这一前提，而该前提在分布内成立、在偏移下可能崩塌，需由计划中的复现实验在客观 QA 集上实测确认。"
+      ],
+      "last_week_id": "2026-W34",
+      "coverage_count": 1
+    },
+    {
+      "topic_id": "single-pass-abstention",
+      "display_name": "单次前向答题与拒答",
+      "aliases": [
+        "answer-or-abstain",
+        "YOPO",
+        "frozen LLM abstain without classifier",
+        "sufficiency direction",
+        "single-pass abstention",
+        "无需分类器拒答",
+        "Can a frozen LLM abstain from answering in a single forward pass without a separate classifier or retraining?",
+        "steering/sufficiency 干扰",
+        "单次前向拒答"
+      ],
+      "one_line_summary": "冻结 LLM 可以在单次前向中利用残差流里固定的零样本 sufficiency 方向进行拒答，无需额外分类器、重训或第二遍前向；真正成本在 steering 写入对该方向的污染，而无标签 MSE 还原网络可近乎免费地 undo，且该干扰随容量变化——小模型互相破坏、7B 上反而增强。",
+      "standing_open_questions": [
+        "为什么 steering 与 sufficiency 的干扰会随容量反转（小模型互相破坏、7B 上 steered 残差反而更好）？论文给出量化与 identity 初始化经验解法，但没有机制解释——这是悬而未决的表示论问题。",
+        "标签无关方向『在 MuSiQue 上拟合』是否本身就是一种弱监督（源域选择即归纳偏置）？它能否在论文未测的领域/家族之外继续不坍缩，仍待验证。",
+        "answer-or-abstain 基准极易泄漏表层捷径（αNLI 的 early-layer separability 假象）——如何在拒答评测中系统性地排除这种捷径，是本方向的开放方法学问题。"
+      ],
+      "last_week_id": "2026-W34",
+      "coverage_count": 1
+    },
+    {
       "topic_id": "pretraining-alignment",
       "display_name": "把对齐揉进预训练",
       "aliases": [
@@ -85,5 +128,5 @@
       "coverage_count": 1
     }
   ],
-  "updated_at": "2026-08-17T23:45:40Z"
+  "updated_at": "2026-08-19T16:52:26Z"
 }

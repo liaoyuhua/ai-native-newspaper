@@ -18,7 +18,8 @@ FULL_DRAFT_PROMPT = """\
 1. 整篇只回答一个中心问题，深挖 1–2 个机制；材料多不等于都要写。
 2. 先解释旧方法具体卡在哪里，再解释新机制如何改变控制流、表示或优化目标。
 3. 具体外部事实、方法细节和实验结果必须来自材料，并在句末加【EV:evidence_id】。
-4. 作者推断必须用“这意味着 / 可以推测 / 更合理的理解是”等方式与来源事实区分。
+4. 事实段与作者分析要让读者能够区分。一个推理段落在入口处表明“这意味着 / 更合理的理解是”等即可，
+   不要每句话重复“可能、可以推测”，也不要把作者分析伪装成论文原结论。
 5. 不强行制造故事、三段论、金句或贯穿比喻；比喻只有确实降低理解成本时才使用一次。
 6. 不写论文清单，不逐项复述机制卡字段，不为了对称强拼两个无关工作。
 7. context 不提前完整讲完后续机制；close 不引入正文没有展开的新路线。
@@ -28,6 +29,12 @@ FULL_DRAFT_PROMPT = """\
 10. method_role=primary_subject 是本文主角。机制正文至少一半用于它，并覆盖输入、数据/状态构造、
     ≥3 步控制流、训练目标或接口变化、关键实验结果与局限。background 卡只能帮助解释主角。
 11. 标题、subtitle、章节标题合计最多使用一个贯穿比喻；技术结论优先直说。
+12. 遵循中文技术社区的自然用语，不为中文纯度机械翻译产品名、API 对象或工程术语。
+    产品语境中的 Skills 写作“Skills（可复用的任务说明与资源包）”，后文写 Skills，不写“技能”；
+    agent、prompt、token、embedding、rollout 等可保留英文。普通能力语境中的 skills 仍可译为“能力”。
+    不要在每个中文术语后机械添加括号英文。
+13. 页面会单独渲染 title 和 subtitle。任何 section.text 都不得再次写文章标题、subtitle、Markdown H1（#）
+    或标题下的摘要引用块；每节正文直接从自然段开始。
 
 只返回 JSON：{"sections":[{"heading":"必须与大纲对应","role":"context|mechanism|close",
 "card_index":null,"text":"Markdown 正文"}]}
@@ -39,6 +46,7 @@ DRAFT_DEPTH_REPAIR_PROMPT = """\
 - 优先补足 method_role=primary_subject：输入、数据/状态构造、至少3步控制流、目标/接口变化、实验结果与局限。
 - background 方法只保留解释主角所需的最少内容。
 - 不新增材料中没有的事实、数字或因果结论；信息不足时明确写出证据边界，不要灌水。
+- 保留原稿自然的技术术语；产品名和工程对象不要机械翻译，正常作者分析也不要逐句添加免责声明。
 - 全文达到配置中的最低深度，机制内容至少占 45%，主角机制节至少 650 汉字。
 只返回 JSON：{"sections":[{"heading":"...","role":"context|mechanism|close","card_index":null,"text":"..."}]}
 """
@@ -132,3 +140,41 @@ def _draft_depth_issues(sections: list[dict], outline_sections: list[dict]) -> l
     if primary < config.ARTICLE_MIN_PRIMARY_MECHANISM_CHARS:
         issues.append(f"主角机制 {primary} 字，低于 {config.ARTICLE_MIN_PRIMARY_MECHANISM_CHARS}")
     return issues
+
+
+def expand_primary_after_factcheck(
+    section_text: str,
+    primary_card: dict,
+    evidence_store: EvidenceStore,
+    depth_issues: list[str],
+) -> tuple[str, str]:
+    """事实核查删减后，只补主角机制，并把补写再次交给事实核查。"""
+    evidence_ids = [str(primary_card.get("evidence_id") or "")]
+    evidence_ids.extend(
+        str(x.get("evidence_id") or "") for x in primary_card.get("evidence") or []
+    )
+    evidence = []
+    for eid in dict.fromkeys(x for x in evidence_ids if x):
+        ev = evidence_store.get(eid)
+        if ev:
+            evidence.append({"id": eid, "title": ev.title, "excerpt": ev.excerpt[:3600]})
+    result, model_used = chat_json_with_fallback(
+        model=config.MODEL_WRITING,
+        fallback_model=config.MODEL_WRITING_FALLBACK,
+        system_prompt=(
+            "你是技术文章的机制编辑。事实核查删掉了没有依据的内容，现在只扩写主角机制节。"
+            "必须保留已有有效【EV:evidence_id】，新增事实只能来自给定证据并在句末标相应 evidence_id。"
+            "补足输入、数据/状态构造、至少3步控制流、训练目标或接口变化、关键结果与局限。"
+            "如果证据没有细节，明确写出边界，不得猜测。目标 750–1000 汉字。"
+            "遵循中文技术社区用语，不机械翻译产品名/工程对象，不给正常作者分析逐句加免责声明。"
+            '只返回 JSON：{"text":"修改后的完整小节"}'
+        ),
+        user_prompt=(
+            "未通过项：\n- " + "\n- ".join(depth_issues)
+            + "\n\n主角机制卡：\n" + json.dumps(primary_card, ensure_ascii=False, indent=2)
+            + "\n\n可用证据：\n" + json.dumps(evidence, ensure_ascii=False)
+            + "\n\n当前小节：\n" + section_text
+        ),
+        temperature=0.25,
+    )
+    return str(result.get("text") or section_text).strip(), model_used

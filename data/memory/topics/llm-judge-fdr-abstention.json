@@ -1,0 +1,79 @@
+{
+  "topic_id": "llm-judge-fdr-abstention",
+  "display_name": "LLM 事实裁判的 FDR 控制与弃权",
+  "aliases": [
+    "不确定性感知弃权",
+    "LLM 裁判风险控制",
+    "选择性预测",
+    "可证明风险保证",
+    "置信度校准",
+    "Can uncertainty-aware abstention provably bound the risk of LLM judges?"
+  ],
+  "coverage": [
+    {
+      "week_id": "2026-W34",
+      "article_title": "FDR 控制与置信失效：LLM 事实裁判的双阈值校准",
+      "covered_angles": [
+        "问题定义：LLM 裁判在客观事实判定中的失败往往是沉默的，需要从主观打分转向可证明的风险控制。",
+        "方法机制：主角论文用 Clopper–Pearson 区间校准双阈值，将弃权与检索回退结合，给出被接受裁决 FDR 的有限样本高概率上界。",
+        "理论谱系：定位在 Learn then Test 与 Conformal Risk Control 之间，强调从多重假设检验到期望损失控制的关系。",
+        "对照证据：视频 QA 研究中置信度在证据退化下不收缩，证明置信信号可能'不知道自己不知道'，威胁保证的分布外有效性。",
+        "批判视角：指出该保证是分布内合同，真正瓶颈是置信度是否有信息量，而非 FDR 控制本身。",
+        "同方向区分：与 conformal prediction 给 LLM judge 输出评分区间的做法区分，一个管‘分数多稳’，一个管‘接受集合错多少’。"
+      ],
+      "key_works_covered": [
+        {
+          "title": "Judge, Retrieve, or Abstain: Uncertainty-Guarded LLM Judging with Provable Risk Guarantees",
+          "url": "https://arxiv.org/abs/2608.17994",
+          "note": "本期主角：在参考无关的二元事实判定中，用校准阈值+检索回退给出 FDR 有限样本高概率保证。"
+        },
+        {
+          "title": "Learn then Test: Calibrating Predictive Algorithms to Achieve Risk Control",
+          "url": "https://arxiv.org/abs/2110.01052",
+          "note": "机制祖先：将风险控制转化为多重假设检验，用固定序列检验在留出集上认证阈值，是 Clopper–Pearson 校准的直接出处。"
+        },
+        {
+          "title": "Explicit Abstention Knobs for Predictable Reliability in Video Question Answering",
+          "url": "https://arxiv.org/abs/2601.00138",
+          "note": "反面证据：显示置信度在证据退化下不收缩，模型'不知道自己不知道'，证明 FDR 保证是分布内合同。"
+        },
+        {
+          "title": "Analyzing Uncertainty of LLM-as-a-Judge: Interval Evaluations with Conformal Prediction",
+          "url": "https://arxiv.org/abs/2509.18658",
+          "note": "同方向但目标不同：用 conformal prediction 给评分输出区间，关注覆盖率而非二元风险控制，可作对照。"
+        },
+        {
+          "title": "Conformal Risk Control",
+          "url": "https://arxiv.org/abs/2208.02814",
+          "note": "更一般的理论容器：将 conformal 扩展到任意单调损失期望控制，提供与 Clopper–Pearson 高概率界相对的期望界视角。"
+        }
+      ],
+      "open_questions": [
+        "裁判置信度的具体来源未在已抓取的全文片段中披露（token 概率、多次采样自洽度、还是口述置信度）。不同的信号在分布偏移下失效方式不同（视频 QA 研究显示 self-reported 与 logprob p_max 都『不知道自己不知道』），写作前必须核对方法节确认其 UQ 信号并检查是否有跨分布验证。",
+        "有限样本 FDR 保证的可交换性假设在部署中极易被打破：Abstention Knobs 论文证明置信度在证据退化下不收缩、阈值静默超收；主角论文声称保证对两级路由『无需额外假设』，但那是路由统计的数学性质，不等于置信信号在偏移数据上仍有区分度——'保证能否跨分布兑现'是未解决的争议点。",
+        "『不确定性弃权在相同 FDR 下覆盖率高于随机弃权』这一 thesis 成分没有被原文直接验证（原文的对比对象是单模式基线，非随机弃权）；它依赖『置信度能给错误排序』这一前提，而该前提在分布内成立、在偏移下可能崩塌，需由计划中的复现实验在客观 QA 集上实测确认。"
+      ],
+      "follow_up_signals": [
+        "出现新论文在分布偏移或对抗条件下验证 LLM 裁判弃权框架的 FDR 保证是否仍然成立。",
+        "有研究明确提出 LLM 裁判置信度的具体来源（如 token 概率、采样自洽度、口述置信度）并比较其在偏移下的失效模式。",
+        "出现直接对比随机弃权与不确定性弃权在相同 FDR 下覆盖率的实证研究。",
+        "有工作将保证扩展至期望界或提出针对分布偏移的校准修正方法。",
+        "在实际高风险场景（如医疗、金融、法律）中出现 LLM 裁判弃权框架被部署且发生置信度失效的案例报告。"
+      ],
+      "avoid_repeating": [
+        "避免再次解释 Clopper–Pearson 区间的数学细节和校准流程。",
+        "避免复述视频 QA 研究的具体实验设置（18帧 vs 6帧）和数据，除非引用新发现。",
+        "不再重复 'LLM 裁判失败是沉默的' 这一入门比喻作为开篇。",
+        "避免对 Learn then Test 和 Conformal Risk Control 做基础介绍，除非有新的理论连接或扩展。",
+        "在没有新证据的情况下，不要再次长篇批评 '分布内合同' 的局限性。"
+      ]
+    }
+  ],
+  "one_line_summary": "LLM 裁判用于客观事实判定时，核心问题已从提升准确率转向提供有限样本统计风险合同：通过 Clopper–Pearson 校准与检索回退实现 FDR 上界，但该合同仅覆盖校准过程，置信信号在分布偏移下失效是未解决的关键瓶颈。",
+  "standing_open_questions": [
+    "裁判置信度的具体来源未在已抓取的全文片段中披露（token 概率、多次采样自洽度、还是口述置信度）。不同的信号在分布偏移下失效方式不同（视频 QA 研究显示 self-reported 与 logprob p_max 都『不知道自己不知道』），写作前必须核对方法节确认其 UQ 信号并检查是否有跨分布验证。",
+    "有限样本 FDR 保证的可交换性假设在部署中极易被打破：Abstention Knobs 论文证明置信度在证据退化下不收缩、阈值静默超收；主角论文声称保证对两级路由『无需额外假设』，但那是路由统计的数学性质，不等于置信信号在偏移数据上仍有区分度——'保证能否跨分布兑现'是未解决的争议点。",
+    "『不确定性弃权在相同 FDR 下覆盖率高于随机弃权』这一 thesis 成分没有被原文直接验证（原文的对比对象是单模式基线，非随机弃权）；它依赖『置信度能给错误排序』这一前提，而该前提在分布内成立、在偏移下可能崩塌，需由计划中的复现实验在客观 QA 集上实测确认。"
+  ],
+  "updated_at": "2026-08-19T16:52:26Z"
+}

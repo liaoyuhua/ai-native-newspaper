@@ -35,6 +35,8 @@ READER_REVIEW_PROMPT = """\
 - non_blocking：实现细节、常见缩写或数学名词，即使不熟悉也不妨碍读者复述中心论证。
   缩写可建议首次展开；非关键数学术语优先改写成它在本文中的作用，但它们不能单独阻止发布。
 - 一个术语只有在确实导致某项 checks=false 或留下关键 unanswered_question 时，才能列为 blocking。
+- 保留英文术语不等于没有解释。若上下文已经说明 Skills、agent、token 等对象在本文中做什么，
+  不要仅因为没有中文直译就判为 blocking；产品专名被机械翻译反而可能造成误解。
 
 只返回 JSON：
 {"checks":{"can_identify_system":false,"can_define_core_objects":false,
