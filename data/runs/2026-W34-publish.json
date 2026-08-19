@@ -1,355 +1,41 @@
 {
   "run_id": "2026-W34-publish",
   "workflow": "weekly_publish_v2",
-  "status": "completed",
-  "started_at": "2026-08-17T23:24:37.346161+00:00",
-  "finished_at": "2026-08-17T23:45:40.573605+00:00",
-  "python_version": "3.12.13",
+  "status": "skipped",
+  "started_at": "2026-08-19T02:51:12.844922+00:00",
+  "finished_at": "2026-08-19T03:22:11.786777+00:00",
+  "python_version": "3.12.14",
   "config": {},
   "stages": [
     {
       "name": "proposal_loaded",
-      "at": "2026-08-17T23:24:37.351167+00:00",
+      "at": "2026-08-19T02:51:12.851166+00:00",
       "question": "Can alignment be baked into a model from token zero via synthetic personas, and what does that change about post-training?",
       "schema_version": "2.0"
     },
     {
       "name": "research_completed",
-      "at": "2026-08-17T23:30:40.197168+00:00",
-      "evidence_count": 55,
-      "key_work_count": 4,
+      "at": "2026-08-19T03:04:49.203260+00:00",
+      "evidence_count": 52,
+      "key_work_count": 5,
       "high_card_count": 2
     }
   ],
   "decision": {
-    "article_title": "把对齐揉进黏土：为什么 post-training 只剩绑定人格",
+    "reason": "article_depth_contract_failed",
     "quality_report": {
-      "claim_audit": {
-        "claims": [
-          {
-            "text": "以宪法AI（CAI）为例，后训练过程包含监督学习和强化学习阶段，用一份原则清单代替人工标注来约束模型。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_47f09d1ad050"
-            ],
-            "support": "supported",
-            "reason": "ev_47f09d1ad050 摘要明确说明 CAI 包含监督学习和强化学习阶段，唯一人类监督是原则清单。"
-          },
-          {
-            "text": "这些方法背后的大致逻辑是：模型在预训练阶段已经吸收了海量文本，后训练阶段再叠加对齐信号。",
-            "kind": "inference",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "作者使用“大致逻辑”明确表示这是推断，且属于对 CAI 方法的解释。"
-          },
-          {
-            "text": "这层叠加可能很薄。",
-            "kind": "inference",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "作者使用“可能”明确表示为推断，是对前文逻辑的延伸。"
-          },
-          {
-            "text": "有研究提示，价值观只是在预训练模型之上的薄弱叠加层，后续仍可能出现错位。",
-            "kind": "reported_result",
-            "evidence_ids": [
-              "ev_90fd2c34e7cf"
-            ],
-            "support": "supported",
-            "reason": "ev_90fd2c34e7cf 摘要原文为 'This can make values a thin overlay, rather than deeply rooted, and facilitate subsequent misalignment'，完整支持该陈述。"
-          },
-          {
-            "text": "SPP 的思路是将价值观前置到预训练阶段：基于一份书面价值观清单（宪法）生成第一人称价值反思，再把这些反思作为预训练文档混入原始语料，使模型在预训练阶段就接触对齐信号。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_90fd2c34e7cf"
-            ],
-            "support": "supported",
-            "reason": "ev_90fd2c34e7cf 摘要描述 SPP 时说明 'annotate pretraining documents with value-aligned first-person reflections derived from a normative value constitution' 以及 'installs the desired assistant persona from token zero in pretraining'。"
-          },
-          {
-            "text": "表格中 CAI 机制：用宪法引导模型自我批判与修订，生成无害响应，输出修订后的响应。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_47f09d1ad050"
-            ],
-            "support": "supported",
-            "reason": "ev_47f09d1ad050 摘要提到 'generate self-critiques and revisions' 并 'finetune the original model on revised responses'，且提到训练无害助手。"
-          },
-          {
-            "text": "表格中 Instruction PT 机制：用指令合成器把原始文本变成指令-响应对，增强预训练语料，输出监督多任务预训练信号。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_280d4f876444"
-            ],
-            "support": "supported",
-            "reason": "ev_280d4f876444 摘要明确说明 'augments massive raw corpora with instruction-response pairs'，且由 'instruction synthesizer built on open-source models' 生成。"
-          },
-          {
-            "text": "这两张卡合起来，就是 SPP 把宪法反思按指令格式注入预训练文档的技术基础。",
-            "kind": "inference",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "这是作者基于前文对 CAI 和 Instruction PT 机制的整合解读，属于推断且上下文明确表明是作者分析。"
-          },
-          {
-            "text": "CAI 的起点是一份短的原则清单（constitution），这是唯一的人类监督信号。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_47f09d1ad050"
-            ],
-            "support": "supported",
-            "reason": "ev_47f09d1ad050 摘要中 'The only human oversight is provided through a list of rules or principles' 直接支持。"
-          },
-          {
-            "text": "监督学习阶段：从初始模型采样响应，然后按照宪法生成自我批判和修订，再用修订后的响应微调模型。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_47f09d1ad050"
-            ],
-            "support": "supported",
-            "reason": "ev_47f09d1ad050 摘要 'In the supervised phase we sample from an initial model, then generate self-critiques and revisions, and then finetune the original model on revised responses' 完全对应。"
-          },
-          {
-            "text": "据报道，后续还会进行强化学习阶段，以进一步优化模型行为。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_47f09d1ad050"
-            ],
-            "support": "supported",
-            "reason": "ev_47f09d1ad050 摘要详细描述了 RL 阶段和 RLAIF，支持存在强化学习阶段。"
-          },
-          {
-            "text": "CAI 的中间产物——宪法引导的自我批判和修订——正是 SPP 需要的第一人称价值反思。",
-            "kind": "inference",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "这是作者对两者关系的解读，虽然语气较强，但属于推断；SPP 论文并未直接说明其反思就是 CAI 的自我批判修订，但正文以“关键点”引出，可视为作者分析。"
-          },
-          {
-            "text": "SPP 把这个反思挪到预训练文档里，作为语料的一部分。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_90fd2c34e7cf"
-            ],
-            "support": "supported",
-            "reason": "ev_90fd2c34e7cf 摘要 'annotate pretraining documents with value-aligned first-person reflections' 支持。"
-          },
-          {
-            "text": "SPP 不是抛弃 CAI，而是把 CAI 的数据生成过程前置到预训练数据构造中。",
-            "kind": "inference",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "这是作者基于 SPP 方法对 CAI 借鉴关系的推断，正文中由“这意味着”引出，属于明确推断。"
-          },
-          {
-            "text": "Instruction Pre-Training 的核心是把原始语料转化成监督多任务数据。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_280d4f876444"
-            ],
-            "support": "supported",
-            "reason": "ev_280d4f876444 摘要标题和正文均表明该框架是 supervised multitask pre-training。"
-          },
-          {
-            "text": "据报道，它先构造一个指令合成器：利用开源模型，输入一段 raw text，输出一组 instruction-response pairs。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_280d4f876444"
-            ],
-            "support": "supported",
-            "reason": "ev_280d4f876444 摘要 'The instruction-response pairs are generated by an efficient instruction synthesizer built on open-source models' 支持。"
-          },
-          {
-            "text": "在实验中合成了2亿条 instruction-response pairs，覆盖40+任务类别。",
-            "kind": "reported_result",
-            "evidence_ids": [
-              "ev_280d4f876444"
-            ],
-            "support": "supported",
-            "reason": "ev_280d4f876444 摘要明确 'we synthesize 200M instruction-response pairs covering 40+ task categories'。"
-          },
-          {
-            "text": "这些合成对随后被用于增强预训练语料。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_280d4f876444"
-            ],
-            "support": "supported",
-            "reason": "ev_280d4f876444 摘要 'augments massive raw corpora with instruction-response pairs to pre-train LMs' 支持。"
-          },
-          {
-            "text": "相关实验初步显示，该方法在后续指令微调中收益更大。",
-            "kind": "reported_result",
-            "evidence_ids": [
-              "ev_280d4f876444"
-            ],
-            "support": "supported",
-            "reason": "ev_280d4f876444 摘要 'also benefits more from further instruction tuning' 支持。"
-          },
-          {
-            "text": "SPP 借用的正是这个框架：将宪法反思包装成 instruction-response pairs，然后混入预训练文档。",
-            "kind": "inference",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "这是作者对 SPP 技术来源的推断，正文中“正是”表明作者解读，且 SPP 论文未明确提及 instruction-response pairs，但基于 Instruction PT 框架合理推出。"
-          },
-          {
-            "text": "这样，价值反思不再是外部附加，而是预训练任务的一部分。",
-            "kind": "inference",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "作者从 SPP 将反思混入预训练文档而推出的结论，属于合理推断。"
-          },
-          {
-            "text": "从 token zero 开始，模型就学习了一个“根据文本生成价值反思”的监督信号，从而把目标人格作为原生任务之一内化。",
-            "kind": "inference",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "前半部分“从 token zero 开始”是事实，但整体是作者对训练机制的推断；SPP 摘要只提到安装人格，未明确监督信号细节，因此属于推断。"
-          },
-          {
-            "text": "SPP 从 token zero 开始在预训练中安装目标人格。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_90fd2c34e7cf"
-            ],
-            "support": "supported",
-            "reason": "ev_90fd2c34e7cf 摘要 'installs the desired assistant persona from token zero in pretraining' 直接支持。"
-          },
-          {
-            "text": "post-training 的职责是 persona binding，即绑定一个已经存在的助手人格。",
-            "kind": "fact",
-            "evidence_ids": [
-              "ev_90fd2c34e7cf"
-            ],
-            "support": "supported",
-            "reason": "ev_90fd2c34e7cf 摘要 'we post-train on user–assistant dialogue data, which binds this desired persona to the assistant identity, a process we call persona binding' 支持。"
-          },
-          {
-            "text": "post-training 的职责从“安装价值观”降级为“绑定一个已经存在的助手人格”。",
-            "kind": "author_judgment",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "价值判断，不要求引用；“降级”是作者的主观评价。"
-          },
-          {
-            "text": "这不是说 post-training 不重要，而是它的角色变了。",
-            "kind": "author_judgment",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "作者对重要性的判断，不要求引用。"
-          },
-          {
-            "text": "它只是把一个标签路由到预训练中已经形成的人格。",
-            "kind": "author_judgment",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "比喻性陈述，是作者对 persona binding 的解释和价值判断。"
-          },
-          {
-            "text": "规模外推：SPP 实验结果是 3B 参数、500B tokens。",
-            "kind": "reported_result",
-            "evidence_ids": [
-              "ev_90fd2c34e7cf"
-            ],
-            "support": "supported",
-            "reason": "ev_90fd2c34e7cf 摘要 'pretraining models up to 3B parameters on 500B tokens' 支持。"
-          },
-          {
-            "text": "这些结果能否外推到百B参数、数十T token 尚未可知。",
-            "kind": "inference",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "作者明确表达对未来外推不确定性的推断，属于合理推测。"
-          },
-          {
-            "text": "一个在预训练阶段固化的人格是否更难用少量 SFT 改变？",
-            "kind": "author_judgment",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "这是作者提出的未解问题，属于判断和推断，不要求引用。"
-          },
-          {
-            "text": "SPP 论文展示了早期干预重要的现象（token zero 与 mid-training 差异）。",
-            "kind": "reported_result",
-            "evidence_ids": [
-              "ev_90fd2c34e7cf"
-            ],
-            "support": "supported",
-            "reason": "ev_90fd2c34e7cf 摘要 'Early intervention matters: compared with alignment from token zero, introducing SPP only at the end of pretraining yields weaker constitution adherence...' 支持。"
-          },
-          {
-            "text": "token zero 与 mid-training 差异的机制未明，缺少可核对的解释。",
-            "kind": "author_judgment",
-            "evidence_ids": [],
-            "support": "supported",
-            "reason": "作者对现有解释不足的评价，是价值判断。"
-          }
+      "depth_contract": {
+        "pass": false,
+        "issues": [
+          "正文仅 1940 字，低于 2200 字深度下限",
+          "机制内容占比 35.2%，低于 45%",
+          "主角机制仅 392 字，低于 650 字"
         ],
-        "blocking_claims": [],
-        "pass": true,
-        "round": 2,
-        "audit_rounds": 2
-      },
-      "final_review": {
-        "scores": {
-          "thesis_focus": 4.0,
-          "structural_coherence": 4.0,
-          "mechanism_depth": 4.0,
-          "editorial_voice": 4.0,
-          "weekly_scope": 4.0,
-          "evidence_honesty": 4.0
-        },
-        "fatal_issues": [],
-        "strengths": [
-          "中心论点清晰，始终围绕对齐主动权在预训练而非后训练展开",
-          "对CAI和Instruction PT两个机制的拆解具体，读者可以复述关键步骤",
-          "证据标注明确，事实、推断与判断基本分开",
-          "风险讨论体现了克制的人类判断，没有强行给出解决方案"
-        ],
-        "revision_priorities": [
-          "可适当减少比喻密度，避免‘揉黏土’‘声音’等意象叠加干扰技术表述",
-          "部分证据引用（如‘有研究提示’）可更具体指向论文或实验，增强可核查性",
-          "机制部分可补充SPP论文中实际实验结果与结论的对应关系，使判断更有支撑",
-          "主结论‘post-training只剩绑定’的表述偏强，可加入更多限定或引用论文原话"
-        ],
-        "overall_pass": true,
-        "average": 4.0,
-        "pass": true
-      },
-      "reader_review": {
-        "checks": {
-          "can_identify_system": true,
-          "can_define_core_objects": true,
-          "can_explain_normal_workflow": true,
-          "can_explain_old_approach": true,
-          "can_explain_new_failure": true
-        },
-        "blocking_gaps": [],
-        "nonblocking_terms": [
-          {
-            "term": "CAI",
-            "recommended_action": "expand"
-          },
-          {
-            "term": "Instruction PT",
-            "recommended_action": "expand"
-          },
-          {
-            "term": "token zero / mid-training",
-            "recommended_action": "rephrase"
-          },
-          {
-            "term": "persona binding",
-            "recommended_action": "leave"
-          }
-        ],
-        "unanswered_questions": [],
-        "repair_instructions": "无",
-        "background_pass": true
+        "body_chars": 1940,
+        "mechanism_chars": 682,
+        "mechanism_ratio": 0.352,
+        "primary_mechanism_chars": 392
       }
-    },
-    "memory_warning": ""
+    }
   }
 }

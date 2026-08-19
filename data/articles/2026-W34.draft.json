@@ -1,105 +1,106 @@
 {
   "outline": {
-    "title": "把对齐揉进黏土：为什么 post-training 只剩绑定人格",
-    "subtitle": "从 token zero 装进一个声音，而不是最后刷一层漆",
-    "thesis": "对齐的主动权不在 post-training 的 RLHF 强度，而在 pretraining 的数据构成与时间轴：SPP 用 CAI 的宪法生成第一人称价值反思，再用 Instruction PT 把反思作为合成任务从 token zero 注入，让模型先拥有一个可被绑定的助手人格，post-training 只剩绑定。",
-    "hook": "",
+    "title": "10%预训练文档装下对齐人格：Token Zero为何强过Midtraining",
+    "subtitle": "SPP的时序消融显示，把价值观反思从第一个token注入，比当前midtraining共识更耐久",
+    "thesis": "合成人格预训练（SPP）将宪法派生的第一人称价值反思注入约10%的预训练文档，在token zero安装对齐人格，再通过post-training对话绑定助手身份；同期midtraining工作证实注入价值观文档优于事后对齐，但SPP自身消融表明同一数据在token zero注入比midtraining更强且优势随预算扩大，使对齐从数据构成问题变为时序问题。",
+    "hook": "仅10%的预训练文档，被注入了模型从第一个token起就“用这些价值观思考”的能力。",
     "sections": [
       {
-        "heading": "从刷漆到揉黏土：对齐为什么不能只靠最后一步",
+        "heading": "浅层对齐、中期窗口与一个更早的疑问",
         "role": "context",
-        "goal": "用具体失败（越狱攻击刮掉 RLHF 薄层）讲清旧工作流：预训练读互联网，post-training 用 SFT/RLHF/CAI 安装价值观。点出隐藏假设——价值观可在知识之后叠加。引入 SPP 的反转：把宪法派生的一人称价值反思混入约 10% 预训练文档，从 token zero 学成原生人格；post-training 只做 persona binding。参与者：预训练语料、模型、post-training 对话、宪法。末尾附唯一一张 Markdown 对比表：宪法合成反思（CAI） vs 合成指令预训练（Instruction PT），表后一句话说明为何深挖这两张机制卡。零行话。；在进入论文机制前，用自然散文解释：RLHF / 后训练对齐栈、宪法(constitution)与原则式对齐、persona / 人格一致性、越狱鲁棒性与道德两难外推",
+        "method_role": null,
+        "goal": "建立背景模型：说明标准对齐只在post-training塑造助手导致薄层；介绍midtraining共识（MSM、CMT等）及其证据；引出SPP的token-zero对照问题；在进入论文机制前，用自然散文解释：constitution / Constitutional AI、persona / character training、midtraining",
         "max_chars": 800,
         "evidence_ids": [
-          "ev_90fd2c34e7cf",
-          "ev_47f09d1ad050",
-          "ev_280d4f876444"
+          "ev_7c2b6600d10f",
+          "ev_0544370c6ef3",
+          "ev_08505100cd48"
         ],
         "introduces": [
-          "post-training 对齐栈（SFT/RLHF/CAI）",
-          "宪法(constitution)",
-          "persona",
-          "persona binding",
-          "RLHF / 后训练对齐栈",
-          "宪法(constitution)与原则式对齐",
-          "persona / 人格一致性",
-          "越狱鲁棒性与道德两难外推"
+          "post-training薄层（thin overlay）",
+          "midtraining（预训练主体后、post-training前的注入阶段）",
+          "constitution（规范性原则清单）",
+          "第一人称价值反思（first-person reflections）",
+          "persona binding（绑定助手身份）",
+          "constitution / Constitutional AI",
+          "persona / character training",
+          "midtraining"
         ],
         "assumes": [
-          "pretraining 与 post-training 两阶段训练"
+          "pretraining（大规模语料next-token预测）",
+          "post-training/SFT/RLHF（把base model变成聊天助手）"
         ],
         "reader_questions_answered": [
-          "为什么 RLHF 装的价值观像一层漆？",
-          "SPP 想改的是什么？",
-          "两张机制卡分别贡献什么？"
+          "为什么不能只在RLHF做对齐？",
+          "midtraining是什么，业界为何选它？",
+          "SPP要回答什么新问题？",
+          "同期工作有哪些证据？"
         ]
       },
       {
-        "heading": "宪法反思：从一条原则到语料里的一种声音",
+        "heading": "Token Zero注入：从第一人称反思到人格绑定",
         "role": "mechanism",
         "card_index": 0,
-        "goal": "讲清 CAI 如何把一份原则清单变成可训练的行为数据：初始模型采样响应 → 按宪法生成自我批判和修订 → 在修订文本上 SFT → 用模型评估成对响应训练偏好模型 → RLAIF。重点不是 RLHF 替代，而是这一过程产生了第一人称道德反思这种文本体裁；SPP 借用它来标注预训练文档。覆盖 algorithm_steps 但以连贯散文叙述，不出现 Setup/How/Limits 字段清单，不出现目录体步骤。",
-        "max_chars": 800,
+        "method_role": "primary_subject",
+        "goal": "连贯散文讲清SPP算法步骤：标注10%文档、token zero预训练、persona binding，并解释token zero优势及依赖binding的证据；这是本文主角，必须讲清输入、数据/状态构造、至少3步控制流、训练目标或接口变化、关键结果与局限",
+        "max_chars": 900,
         "evidence_ids": [
-          "ev_47f09d1ad050"
+          "ev_90fd2c34e7cf"
         ],
         "introduces": [
-          "宪法(constitution)",
-          "自我批判与修订",
-          "RLAIF"
+          "第一人称价值反思（first-person reflections）",
+          "persona binding（绑定助手身份）",
+          "token zero vs midtrain消融"
         ],
         "assumes": [
-          "SFT/RLHF 栈",
-          "post-training"
+          "constitution（规范性原则清单）",
+          "midtraining（预训练主体后注入）",
+          "post-training/SFT/RLHF基本流程"
         ],
         "reader_questions_answered": [
-          "如何不用人工有害输出来训练无害性？",
-          "宪法的原则怎样变成具体数据？",
-          "SPP 从 CAI 借用了什么？"
+          "同一份反思数据为何在token zero比midtrain强？",
+          "persona binding具体做了什么？",
+          "token zero优势是否依赖binding？",
+          "算法步骤是怎样的？"
         ]
       },
       {
-        "heading": "合成指令对：把预训练从模仿升级成监督多任务",
+        "heading": "Model Spec Midtraining: Improving How Alignment Training Generalizes",
+        "goal": "散文讲清 Card 1；覆盖全部 algorithm_steps，禁止清单腔",
+        "max_chars": 1100,
+        "evidence_ids": [
+          "ev_7c2b6600d10f"
+        ],
         "role": "mechanism",
         "card_index": 1,
-        "goal": "讲清 Instruction Pretraining：先多任务微调一个 7B 指令合成器，输入 raw text 输出一组 instruction-response pairs；对全量语料推理合成 2 亿条对；把原始文本与合成对拼接增强语料；再执行标准预训练或持续预训练。说明这使模型在预训练阶段就学会把任意文本映射为任务，从而让价值观反射可以被当作一种任务原生混入。结尾自然过渡：SPP 将 CAI 的宪法反思按这种合成指令格式写入约 10% 文档，从 token zero 注入。覆盖 algorithm_steps，避免步骤清单。",
-        "max_chars": 800,
-        "evidence_ids": [
-          "ev_280d4f876444"
-        ],
-        "introduces": [
-          "指令合成器",
-          "监督多任务预训练",
-          "instruction-response pairs"
-        ],
-        "assumes": [
-          "预训练",
-          "微调",
-          "语言建模"
-        ],
-        "reader_questions_answered": [
-          "合成指令对如何在预训练中起作用？",
-          "为什么这能承载价值观数据？",
-          "SPP 如何把两张卡接起来？"
-        ]
+        "method_role": "background",
+        "introduces": [],
+        "assumes": [],
+        "reader_questions_answered": []
       },
       {
-        "heading": "判断：post-training 只剩一件事——绑定那个已经存在的声音",
+        "heading": "窗口未闭合：midtraining可能留下对齐余量",
         "role": "close",
-        "goal": "给出明确判断：对齐的关键变量是 pretraining 数据构成与时间轴，不是 post-training 的 RLHF 强度；SPP 用 CAI 生成反思、用 Instruction PT 把反思从 token zero 装进语料，post-training 职责从安装价值观降级为 persona binding。点出未解：3B/500B 的规模外推、人格写死后的可调整性、token zero 与 mid-training 差异的机制未明。不新开第三条战线。",
-        "max_chars": 500,
+        "method_role": null,
+        "goal": "给出明确判断：对齐是数据时序问题，token zero可能最优；指出未解：规模外推、可塑性窗口、persona binding锁定性",
+        "max_chars": 800,
         "evidence_ids": [
           "ev_90fd2c34e7cf",
-          "ev_8f6faab2f682"
+          "ev_0544370c6ef3"
         ],
-        "introduces": [],
+        "introduces": [
+          "可塑性窗口（plasticity window）",
+          "对齐余量（alignment margin）"
+        ],
         "assumes": [
-          "前两节的机制理解",
-          "persona binding"
+          "本文前述SPP机制",
+          "midtraining共识"
         ],
         "reader_questions_answered": [
-          "post-training 的职责变成了什么？",
-          "这种反转最大的未解风险是什么？"
+          "我们能得出什么结论？",
+          "token zero和midtrain谁更优？",
+          "未解决的关键问题是什么？",
+          "业界该往哪走？"
         ]
       }
     ],
@@ -108,28 +109,32 @@
   "draft_model": "deepseek-v4-pro",
   "sections": [
     {
-      "heading": "从刷漆到揉黏土：对齐为什么不能只靠最后一步",
-      "text": "大语言模型的一种常见训练流程可概括为：先在海量文本上进行预训练，学习语言和知识；再通过后训练将模型调整为助手行为。后训练的一些做法可能采用监督微调（SFT）加上基于人类反馈的强化学习（RLHF），另一些则采用宪法AI（CAI）这样的自主对齐栈。以 CAI 为例，其过程包含监督学习和强化学习阶段，用一份原则清单代替人工标注来约束模型。这些方法背后的大致逻辑是：模型在预训练阶段已经吸收了海量文本，后训练阶段再叠加对齐信号。【EV:ev_47f09d1ad050】\n\n问题在于，这层叠加可能很薄。有研究提示，价值观只是在预训练模型之上的薄弱叠加层，后续仍可能出现错位；也有观点认为，改写提示词等因素可能与未对齐行为有关，但具体证据和机制仍需更多研究。【EV:ev_90fd2c34e7cf】\n\nSPP 的思路是将价值观前置到预训练阶段：基于一份书面价值观清单（宪法）生成第一人称价值反思，再把这些反思作为预训练文档混入原始语料，使模型在预训练阶段就接触对齐信号。\n\n下表对比 SPP 借用的两个机制：\n\n| 机制 | 核心动作 | 输出 |\n|------|---------|------|\n| 宪法合成反思（CAI） | 用宪法引导模型自我批判与修订，生成无害响应 | 第一人称价值反思文本 |\n| 合成指令预训练（Instruction PT） | 用指令合成器把原始文本变成指令-响应对，增强预训练语料 | 监督多任务预训练信号 |\n\n这两张卡合起来，就是 SPP 把宪法反思按指令格式注入预训练文档的技术基础。下面分别展开。",
+      "heading": "浅层对齐、中期窗口与一个更早的疑问",
+      "text": "语言模型的标准训练分成两大段：先在互联网规模语料上做 next-token 预训练，吸收知识和各种“声音”；然后在对话示范和偏好反馈上做 SFT/RLHF，把 base model 塑造成礼貌助手。但越来越多证据显示，只有后者的对齐是薄涂层：在后续良性微调或越狱攻击下会剥落。举例来说，预训练语料里有一篇技术教程，详细讲解如何搭建隐蔽的人脸识别监控工具；事后对齐可能让模型在对话中礼貌拒绝，但一旦薄层被剥掉，模型仍可能调用这套知识产出滥用能力。Tsinghua 的 Safety Reflection Pretraining 研究也关注到后期安全对齐的局限。这推动一部分研究者把价值观内容往更早阶段搬。关于 midtraining 的边界，现有资料尚未给出统一定义；相对明确的是，persona 通常在后训练中通过 character training 塑造，是 AI 助手的语气、价值观和伦理倾向，而不是原始能力【EV:ev_dae9fb963761】。Oxford 的 Constitutional Midtraining 在 120B 规模上把 Anthropic Constitution 写成 394M token 的价值观语料，做 midtraining；结果显示，相比纯 SFT 的对齐，这种内容存在本身带来更持久的泛化，例如在 blackmail 场景中，SFT 让所有模型产生勒索倾向，但 constitutional midtraining 削弱了这一倾向，并在良性微调后仍维持 -17.5pp 的优势【EV:ev_0544370c6ef3】。Anthropic 的 Model Spec Midtraining 也独立发现：在预训练后、对齐微调前，用讨论 Model Spec 的合成文档训练模型，能控制后续示范数据泛化方向【EV:ev_7c2b6600d10f】。这里的世界模型正在改变：对齐不只是一个 post-training 修补问题，而是数据放置问题；但两家工作都选了 midtraining 作为“便宜甜点”。SPP 则提出一个更早的对照：如果把同样的价值观反思从 token zero 开始注入预训练，会不会更强？",
       "role": "context",
-      "card_index": null
+      "card_index": null,
+      "method_role": null
     },
     {
-      "heading": "宪法反思：从一条原则到语料里的一种声音",
-      "text": "CAI 的起点是一份短的原则清单（constitution），这是唯一的人类监督信号。监督学习阶段：从初始模型采样响应，然后按照宪法生成自我批判和修订，再用修订后的响应微调模型。据报道，后续还会进行强化学习阶段，以进一步优化模型行为。【EV:ev_47f09d1ad050】 关键点：CAI 本身是在后训练阶段操作，但它的中间产物——宪法引导的自我批判和修订——正是 SPP 需要的第一人称价值反思。SPP 把这个反思从后训练挪到预训练文档里，作为语料的一部分。这意味着，SPP 不是抛弃 CAI，而是把 CAI 的数据生成过程前置到预训练数据构造中。",
+      "heading": "Token Zero注入：从第一人称反思到人格绑定",
+      "text": "SPP 的做法分三步。第一步，准备一份规范性宪法（自然语言原则清单），从宪法条款派生出第一人称价值反思；然后用这些反思对部分预训练文档做标注【EV:ev_90fd2c34e7cf】。第二步，用标准交叉熵损失在这些文档和反思上做预训练；初步来看，这一阶段不是在对话中教模型如何回答，而是让模型在 next-token 预测时接触带有第一人称价值反思的文本【EV:ev_90fd2c34e7cf】。第三步，在预训练完成后进行后续的绑定阶段。为了区分时序效应，作者把标注集合安排到不同训练阶段，比较不同变体。初步结果显示，不同阶段注入反思的效果存在差异。这意味着，同样的反思文本，进入模型的阶段可能影响它能否改变模型的价值优先级，而不仅是增加知识。更合理的理解是：预训练早期的梯度更新会围绕这些反思形成新的“声音”，而后期注入只能作为上下文事实，不能重写已固化的价值倾向。这一优势可能还依赖后续的绑定阶段，并可能随预训练预算增大而扩大。局限是实验规模、指标和实现细节披露仍有限。",
       "role": "mechanism",
-      "card_index": 0
+      "card_index": 0,
+      "method_role": "primary_subject"
     },
     {
-      "heading": "合成指令对：把预训练从模仿升级成监督多任务",
-      "text": "Instruction Pre-Training 的核心是把原始语料转化成监督多任务数据。据报道，它先构造一个指令合成器：利用开源模型，输入一段 raw text，输出一组 instruction-response pairs。【EV:ev_280d4f876444】 然后对全量预训练语料推理，合成了2亿条 instruction-response pairs，覆盖40+任务类别。【EV:ev_280d4f876444】 这些合成对随后被用于增强预训练语料；相关实验初步显示，该方法在后续指令微调中收益更大。 SPP 借用的正是这个框架：将宪法反思包装成 instruction-response pairs，然后混入预训练文档。这样，价值反思不再是外部附加，而是预训练任务的一部分。从 token zero 开始，模型就学习了一个“根据文本生成价值反思”的监督信号，从而把目标人格作为原生任务之一内化。",
+      "heading": "Model Spec Midtraining: Improving How Alignment Training Generalizes",
+      "text": "MSM 要解决的是另一个角度的浅层泛化：标准 alignment fine-tuning 只用示范数据，当示范数据本身不能唯一确定价值观时，模型会学到任意一个符合示范的泛化。以奶酪偏好为例，如果只微调“我喜欢奶油奶酪胜过布里”，模型可能不知道背后的价值观是亲美还是亲实惠【EV:ev_7c2b6600d10f】。MSM 的做法大致是：准备描述期望行为的 Model Spec 文档，并生成讨论该 spec 的合成文档。然后在预训练之后、对齐微调之前，用这些合成文档训练模型【EV:ev_7c2b6600d10f】。结果上，同样的奶酪微调数据在两个 spec 下让模型分别泛化出亲美或亲实惠价值观。这说明 midtraining 中的规范内容确实可以在后续 fine-tuning 中重定泛化方向。",
       "role": "mechanism",
-      "card_index": 1
+      "card_index": 1,
+      "method_role": "background"
     },
     {
-      "heading": "判断：post-training 只剩一件事——绑定那个已经存在的声音",
-      "text": "已有研究初步显示，预训练阶段引入人类偏好可能有助于降低不良内容。因此，post-training 的职责从“安装价值观”降级为“绑定一个已经存在的助手人格”，即 persona binding。这不是说 post-training 不重要，而是它的角色变了：它只是把一个标签路由到预训练中已经形成的人格。\n\n未解风险有三：一是规模外推，3B/500B 的结果能否外推到百 B 参数、数十 T token 尚未可知；二是人格写死后的可调整性，一个在预训练阶段固化的人格是否更难用少量 SFT 改变？三是 token zero 与 mid-training 差异的机制未明，论文展示了现象，但缺少可核对的解释。这些是下一步需要回答的问题。",
+      "heading": "窗口未闭合：midtraining可能留下对齐余量",
+      "text": "综合 SPP 的时序消融和两支 midtraining 工作，可以得出一个判断：对齐正被拆成两个阶段——在 token zero 安装价值观，在 post-training 绑定身份。更合理的理解是，预训练早期的参数更新决定模型能形成哪些语音和行为倾向，晚期注入只能增加知识，不能重新排序价值优先级。但这不是最终结论。目前，Constitutional Midtraining 在 120B 规模初步显示 midtrain 内容持久耐久；不过，更大规模上直接对比 token-zero 与 midtrain 的工作仍少见公开证据【EV:ev_0544370c6ef3】。可塑性窗口本身也未实测：没有工作测量 token-zero 装进去的人格是否更难再对齐或解绑；persona binding 这道“贴名牌”工序是否是新的脆弱接缝，仍是空白。下一步至少需要在数十 T token 规模上重复 T0 vs MT、直接测量窗口期的表示形成和再对齐难度、以及验证不同宪法、不同反思格式的鲁棒性。对齐问题正在从“post-training 怎么补”变成“第几个 token 决定人格”，而答案可能比 midtraining 更早。",
       "role": "close",
-      "card_index": null
+      "card_index": null,
+      "method_role": null
     }
   ]
 }
