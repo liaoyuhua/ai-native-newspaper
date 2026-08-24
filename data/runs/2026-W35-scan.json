@@ -1,0 +1,30 @@
+{
+  "run_id": "2026-W35-scan",
+  "workflow": "weekly_scan_v2",
+  "status": "completed",
+  "started_at": "2026-08-24T02:08:33.196363+00:00",
+  "finished_at": "2026-08-24T02:17:03.852003+00:00",
+  "python_version": "3.12.14",
+  "config": {
+    "lookback_days": 14,
+    "schema_version": "2.0",
+    "no_issue": false
+  },
+  "stages": [
+    {
+      "name": "selection_completed",
+      "at": "2026-08-24T02:17:03.851966+00:00",
+      "item_count": 511,
+      "shortlist_count": 5,
+      "recommendation": "pursue",
+      "source_health_counts": {
+        "healthy": 10,
+        "degraded": 1
+      }
+    }
+  ],
+  "decision": {
+    "selected_question": "LLM能否通过masked introspection可靠报告自身内部状态的变化？",
+    "score": 3.906
+  }
+}
