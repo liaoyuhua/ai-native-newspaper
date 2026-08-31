@@ -1,0 +1,29 @@
+{
+  "run_id": "2026-W36-scan",
+  "workflow": "weekly_scan_v2",
+  "status": "completed",
+  "started_at": "2026-08-31T05:58:31.953170+00:00",
+  "finished_at": "2026-08-31T06:06:00.687333+00:00",
+  "python_version": "3.12.14",
+  "config": {
+    "lookback_days": 14,
+    "schema_version": "2.0",
+    "no_issue": false
+  },
+  "stages": [
+    {
+      "name": "selection_completed",
+      "at": "2026-08-31T06:06:00.687295+00:00",
+      "item_count": 554,
+      "shortlist_count": 5,
+      "recommendation": "pursue",
+      "source_health_counts": {
+        "healthy": 11
+      }
+    }
+  ],
+  "decision": {
+    "selected_question": "可验证奖励下的符号反向传播能否将推理能力外化为可检查、可迁移的程序，从而替代权重后训练？",
+    "score": 4.018
+  }
+}
