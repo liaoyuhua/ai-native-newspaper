@@ -1,0 +1,30 @@
+{
+  "run_id": "2026-W37-scan",
+  "workflow": "weekly_scan_v2",
+  "status": "completed",
+  "started_at": "2026-09-07T05:06:32.017717+00:00",
+  "finished_at": "2026-09-07T05:12:59.217415+00:00",
+  "python_version": "3.12.14",
+  "config": {
+    "lookback_days": 14,
+    "schema_version": "2.0",
+    "no_issue": false
+  },
+  "stages": [
+    {
+      "name": "selection_completed",
+      "at": "2026-09-07T05:12:59.217364+00:00",
+      "item_count": 584,
+      "shortlist_count": 5,
+      "recommendation": "pursue",
+      "source_health_counts": {
+        "healthy": 10,
+        "degraded": 1
+      }
+    }
+  ],
+  "decision": {
+    "selected_question": "当机器人指令被语义等价的改写时，VLM奖励模型是否会对同一轨迹给出矛盾的奖励？如何诊断这种释义脆弱性？",
+    "score": 4.074
+  }
+}
